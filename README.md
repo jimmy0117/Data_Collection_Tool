@@ -1,4 +1,12 @@
-## 此專案為前後端分離架構
+## 快速開始（建議）
+
+在專案根目錄可先安裝後端相依套件：
+
+```bash
+pip install -r requirements.txt
+```
+
+## 啟動方式
 
 ### 前端
 使用 Vite + React。clone 後執行以下指令：
@@ -14,8 +22,8 @@ npm run dev
 
 ```bash
 cd backend
-python3 -m venv 環境名稱
-source 環境名稱/bin/activate
+python -m venv .venv
+.\.venv\Scripts\activate
 pip install -r requirements.txt
 python manage.py migrate
 python manage.py runserver
