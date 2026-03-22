@@ -4,6 +4,6 @@ __pycache__/
 .png
 .webm
 db.sqlite3
-/media/ㄏ
+/media/
 /api/migrations/
 backend/db.sqlite3
