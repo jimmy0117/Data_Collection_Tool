@@ -1,1 +1,15 @@
  .DS_Store
+ .env
+ .env.local
+ db.sqlite3
+ __pycache__/
+ *.pyc
+ *.pyo
+ .vscode/
+ .idea/
+ .pytest_cache/
+ .mypy_cache/
+ .venv/
+ venv/
+
+ 
