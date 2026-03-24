@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import SignaturePad from 'signature_pad'
 import consentPdf from '../assets/資料授權同意書.pdf'
-import { API_BASE, authedFetch, getSessionUser } from '../utils/api'
+import { API_BASE, authedFetch, fetchRespondents, getSessionUser } from '../utils/api'
 
 function ConsentSection({ label, items, prefix, onSign, onPreview, canSign, onDelete, isSigned }) {
   return (
@@ -44,6 +45,7 @@ function ConsentSection({ label, items, prefix, onSign, onPreview, canSign, onDe
 }
 
 function ConsentPage() {
+  const [searchParams] = useSearchParams()
   const irbDocs = [
     {
       key: 'IRB-1',
@@ -71,6 +73,8 @@ function ConsentPage() {
   const [showPreview, setShowPreview] = useState(false)
   const [previewDoc, setPreviewDoc] = useState(null)
   const [sessionUser, setSessionUser] = useState(null)
+  const [respondents, setRespondents] = useState([])
+  const [targetUserId, setTargetUserId] = useState('')
   const canvasRef = useRef(null)
   const padRef = useRef(null)
 
@@ -124,14 +128,22 @@ function ConsentPage() {
       setStatusMsg('請先完成簽名')
       return
     }
+    if (sessionUser?.role === 'admin' && !targetUserId) {
+      setStatusMsg('請先選擇受測者')
+      return
+    }
     try {
       const dataUrl = padRef.current.toDataURL('image/png')
       const blob = await (await fetch(dataUrl)).blob()
       const formData = new FormData()
+      const selectedRespondent = respondents.find((item) => String(item.id) === String(targetUserId))
       formData.append('signature_file', blob, 'signature.png')
       formData.append('doc_label', activeDoc?.key || activeDoc?.title || '同意書')
-      formData.append('signer_name', sessionUser?.name || sessionUser?.username || '未填寫姓名')
-      formData.append('signer_email', sessionUser?.email || '')
+      formData.append('signer_name', selectedRespondent?.name || selectedRespondent?.username || sessionUser?.name || sessionUser?.username || '未填寫姓名')
+      formData.append('signer_email', '')
+      if (sessionUser?.role === 'admin' && targetUserId) {
+        formData.append('target_user_id', targetUserId)
+      }
 
       const res = await authedFetch(`${API_BASE}/signatures/`, {
         method: 'POST',
@@ -174,7 +186,8 @@ function ConsentPage() {
     const sigId = signatureMap.get(key)
     if (!sigId) return
     try {
-      const res = await authedFetch(`${API_BASE}/signatures/${sigId}/`, { method: 'DELETE' })
+      const query = sessionUser?.role === 'admin' && targetUserId ? `?target_user_id=${encodeURIComponent(targetUserId)}` : ''
+      const res = await authedFetch(`${API_BASE}/signatures/${sigId}/${query}`, { method: 'DELETE' })
       if (!res.ok && res.status !== 204) throw new Error('delete failed')
       setSignedDocs((prev) => {
         const next = new Set(prev)
@@ -194,9 +207,35 @@ function ConsentPage() {
   }
 
   useEffect(() => {
-    setSessionUser(getSessionUser())
+    const user = getSessionUser()
+    setSessionUser(user)
 
-    authedFetch(`${API_BASE}/signatures/`)
+    if (user?.role === 'admin') {
+      fetchRespondents()
+        .then((data) => {
+          setRespondents(data)
+          const subjectId = searchParams.get('subject')
+          if (subjectId && data.some((item) => String(item.id) === String(subjectId))) {
+            setTargetUserId(String(subjectId))
+          }
+        })
+        .catch((err) => {
+          console.error(err)
+          setStatusMsg('受測者清單載入失敗')
+        })
+    }
+  }, [searchParams])
+
+  useEffect(() => {
+    if (sessionUser?.role === 'admin' && !targetUserId) {
+      setSignedDocs(new Set())
+      setSignatureMap(new Map())
+      return
+    }
+
+    const query = sessionUser?.role === 'admin' && targetUserId ? `?target_user_id=${encodeURIComponent(targetUserId)}` : ''
+
+    authedFetch(`${API_BASE}/signatures/${query}`)
       .then((res) => (res.ok ? res.json() : Promise.reject(res)))
       .then((data) => {
         const signed = new Set()
@@ -215,12 +254,26 @@ function ConsentPage() {
         setSignatureMap(map)
       })
       .catch((err) => console.warn('fetch signatures failed', err))
-  }, [])
+  }, [sessionUser?.role, targetUserId])
 
   return (
     <div className="panel">
       <h2>資料授權</h2>
       <p>請閱讀並確認以下文件，同意後再進行問卷與錄音。此處為介面示意，之後可串接電子簽名與 PDF 下載/上傳。</p>
+
+      {sessionUser?.role === 'admin' && (
+        <div className="form-grid" style={{ maxWidth: '600px', marginBottom: '12px' }}>
+          <label>
+            <span>代簽受測者 *</span>
+            <select value={targetUserId} onChange={(e) => setTargetUserId(e.target.value)}>
+              <option value="">請選擇受測者</option>
+              {respondents.map((subject) => (
+                <option key={subject.id} value={subject.id}>{subject.username}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+      )}
 
       <ConsentSection
         label="研究倫理"

@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { API_BASE, authedFetch } from '../utils/api'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { API_BASE, authedFetch, fetchRespondents, getSessionUser } from '../utils/api'
 
 function RecordingPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const vowelPrompts = ['/a/', '/i/', '/u/', '/ɛ/', '/ə/']
   const phraseGroups = [
     '請讀出鼻音 /m/, /n/ 各 2–3 秒 × 2；再連續念 6–10 次「pa-ta-ka」。',
@@ -21,6 +22,10 @@ function RecordingPage() {
   const [clips, setClips] = useState([])
   const [stepReady, setStepReady] = useState(false)
   const [promptDone, setPromptDone] = useState(new Set())
+  const [sessionUser, setSessionUser] = useState(null)
+  const [respondents, setRespondents] = useState([])
+  const [targetUserId, setTargetUserId] = useState('')
+  const [delegateStatus, setDelegateStatus] = useState('')
 
   const noiseStreamRef = useRef(null)
   const noiseCheckingRef = useRef(false)
@@ -71,6 +76,9 @@ function RecordingPage() {
     formData.append('prompt', promptText)
     formData.append('phase', phaseValue)
     formData.append('session_id', sessionIdRef.current)
+    if (sessionUser?.role === 'admin' && targetUserId) {
+      formData.append('target_user_id', targetUserId)
+    }
 
     try {
       await authedFetch(`${API_BASE}/recordings/`, {
@@ -84,25 +92,48 @@ function RecordingPage() {
 
   const submitSessionLog = async (clipCount) => {
     try {
+      const payload = {
+        session_id: sessionIdRef.current,
+        clip_count: clipCount,
+      }
+      if (sessionUser?.role === 'admin' && targetUserId) {
+        payload.target_user_id = targetUserId
+      }
       await authedFetch(`${API_BASE}/recording-sessions/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          session_id: sessionIdRef.current,
-          clip_count: clipCount,
-        }),
+        body: JSON.stringify(payload),
       })
     } catch (err) {
       console.error('紀錄錄音流程失敗', err)
     }
   }
 
-  useEffect(() => () => {
+  useEffect(() => {
+    const user = getSessionUser()
+    setSessionUser(user)
+    if (user?.role === 'admin') {
+      fetchRespondents()
+        .then((data) => {
+          setRespondents(data)
+          const subjectId = searchParams.get('subject')
+          if (subjectId && data.some((item) => String(item.id) === String(subjectId))) {
+            setTargetUserId(String(subjectId))
+          }
+        })
+        .catch((err) => {
+          console.error(err)
+          setDelegateStatus('受測者清單載入失敗')
+        })
+    }
+
+    return () => {
     noiseStreamRef.current?.getTracks().forEach((t) => t.stop())
     recordStreamRef.current?.getTracks().forEach((t) => t.stop())
-  }, [])
+    }
+  }, [searchParams])
 
   const handleNoiseCheck = async () => {
     setNoiseChecking(true)
@@ -179,6 +210,10 @@ function RecordingPage() {
   const canAdvancePrompt = promptDone.has(currentPrompt)
 
   const handleStart = async () => {
+    if (sessionUser?.role === 'admin' && !targetUserId) {
+      setDelegateStatus('請先選擇受測者')
+      return
+    }
     if (!noiseChecked || isRecording || !stepReady || promptDone.has(currentPrompt)) return
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
@@ -236,6 +271,21 @@ function RecordingPage() {
     <div className="panel">
       <h2>錄音收案</h2>
       <p>流程示意：先檢測環境噪音，通過後開始錄製，介面會逐一提示要念的內容。後續可串接麥克風錄音、分段儲存與檔案上傳。</p>
+
+      {sessionUser?.role === 'admin' && (
+        <div className="form-grid" style={{ maxWidth: '600px', marginBottom: '12px' }}>
+          <label>
+            <span>代收錄音受測者 *</span>
+            <select value={targetUserId} onChange={(e) => setTargetUserId(e.target.value)}>
+              <option value="">請選擇受測者</option>
+              {respondents.map((subject) => (
+                <option key={subject.id} value={subject.id}>{subject.username}</option>
+              ))}
+            </select>
+          </label>
+          {delegateStatus && <span className="status-pill">{delegateStatus}</span>}
+        </div>
+      )}
 
       <div className="recording-grid">
         {!stepReady && (
@@ -323,7 +373,13 @@ function RecordingPage() {
                     disabled={isRecording}
                     onClick={async () => {
                       await submitSessionLog(clipCountRef.current)
-                      navigate('/dashboard')
+                      if (sessionUser?.role === 'admin') {
+                        const selected = respondents.find((item) => String(item.id) === String(targetUserId))
+                        setDelegateStatus(`已加入 ${selected?.username || '受測者'} 的錄音紀錄`)
+                        navigate('/admin/subjects')
+                      } else {
+                        navigate('/dashboard')
+                      }
                     }}
                   >
                     完成並返回儀表板

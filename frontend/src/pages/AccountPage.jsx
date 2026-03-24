@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { API_BASE, authedFetch } from '../utils/api'
 
 function AccountPage() {
-  const emptyProfile = { name: '', email: '', phone: '', role: '' }
+  const emptyProfile = { name: '', phone: '', role: '' }
 
   const [profile, setProfile] = useState(emptyProfile)
   const [status, setStatus] = useState('載入中…')
@@ -18,7 +18,6 @@ function AccountPage() {
       .then((data) => {
         setProfile({
           name: data?.user?.first_name || data?.user?.username || '',
-          email: data?.user?.email || '',
           phone: data?.phone || '',
           role: data?.role || '',
         })
@@ -36,14 +35,13 @@ function AccountPage() {
   }
 
   const handleSave = async () => {
-    if (!profile.name || !profile.email) {
-      setStatus('請填寫姓名與 Email')
+    if (!profile.name) {
+      setStatus('請填寫姓名')
       return
     }
     setSaving(true)
     try {
       const payload = {
-        email: profile.email,
         first_name: profile.name,
         phone: profile.phone,
         role: profile.role,
@@ -91,7 +89,7 @@ function AccountPage() {
       formData.append('signature_file', file)
       formData.append('doc_label', '上傳簽署同意圖檔')
       formData.append('signer_name', profile.name || '未填寫姓名')
-      formData.append('signer_email', profile.email || '')
+      formData.append('signer_email', '')
 
       const res = await authedFetch(`${API_BASE}/signatures/`, {
         method: 'POST',
@@ -123,10 +121,6 @@ function AccountPage() {
         <label>
           <span>姓名 *</span>
           <input type="text" value={profile.name} onChange={(e) => handleChange('name', e.target.value)} />
-        </label>
-        <label>
-          <span>Email *</span>
-          <input type="email" value={profile.email} onChange={(e) => handleChange('email', e.target.value)} />
         </label>
         <label>
           <span>電話</span>

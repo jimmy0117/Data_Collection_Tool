@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react'
-import { API_BASE, authedFetch } from '../utils/api'
+import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { API_BASE, authedFetch, fetchRespondents, getSessionUser } from '../utils/api'
 
 const VHI_ITEMS = [
   '說話時會上氣不接下氣',
@@ -15,6 +16,10 @@ const VHI_ITEMS = [
 ]
 
 function QuestionnairesPage() {
+  const [searchParams] = useSearchParams()
+  const [sessionUser, setSessionUser] = useState(null)
+  const [respondents, setRespondents] = useState([])
+  const [targetUserId, setTargetUserId] = useState('')
   const initialAnswers = useMemo(() => {
     const obj = {}
     VHI_ITEMS.forEach((_, idx) => { obj[idx] = '0' })
@@ -27,10 +32,32 @@ function QuestionnairesPage() {
   const [status, setStatus] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
+  useEffect(() => {
+    const user = getSessionUser()
+    setSessionUser(user)
+    if (user?.role === 'admin') {
+      fetchRespondents()
+        .then((data) => {
+          setRespondents(data)
+          const subjectId = searchParams.get('subject')
+          if (subjectId && data.some((item) => String(item.id) === String(subjectId))) {
+            setTargetUserId(String(subjectId))
+          }
+        })
+        .catch((err) => {
+          console.error(err)
+          setStatus('受測者清單載入失敗')
+        })
+    }
+  }, [searchParams])
+
   const handleSubmit = async () => {
     setSubmitting(true)
     setStatus('')
     try {
+      if (sessionUser?.role === 'admin' && !targetUserId) {
+        throw new Error('請先選擇受測者')
+      }
       const payload = {
         questionnaire_id: 'vhi-10',
         answers: {
@@ -39,16 +66,24 @@ function QuestionnairesPage() {
           responses: VHI_ITEMS.map((q, idx) => ({ question: q, score: Number(answers[idx] || 0) })),
         },
       }
+      if (sessionUser?.role === 'admin' && targetUserId) {
+        payload.target_user_id = targetUserId
+      }
       const res = await authedFetch(`${API_BASE}/questionnaires/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
       if (!res.ok) throw new Error('submit failed')
-      setStatus('已送出')
+      if (sessionUser?.role === 'admin' && targetUserId) {
+        const selected = respondents.find((item) => String(item.id) === String(targetUserId))
+        setStatus(`已送出並加入 ${selected?.username || '受測者'} 的紀錄`)
+      } else {
+        setStatus('已送出')
+      }
     } catch (err) {
       console.error(err)
-      setStatus('提交失敗，請稍後再試')
+      setStatus(err?.message || '提交失敗，請稍後再試')
     } finally {
       setSubmitting(false)
     }
@@ -60,6 +95,17 @@ function QuestionnairesPage() {
       <p>請依目前狀況，為每題選擇嚴重程度 0（不嚴重）到 4（最嚴重）。</p>
 
       <div className="form-grid" style={{ maxWidth: '800px' }}>
+        {sessionUser?.role === 'admin' && (
+          <label>
+            <span>代填受測者 *</span>
+            <select value={targetUserId} onChange={(e) => setTargetUserId(e.target.value)}>
+              <option value="">請選擇受測者</option>
+              {respondents.map((subject) => (
+                <option key={subject.id} value={subject.id}>{subject.username}</option>
+              ))}
+            </select>
+          </label>
+        )}
         <label>
           <span>年齡</span>
           <input

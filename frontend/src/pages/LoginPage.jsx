@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { API_BASE } from '../utils/api'
 
 function LoginPage({ onLogin }) {
-  const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [status, setStatus] = useState('')
   const [loading, setLoading] = useState(false)
@@ -21,7 +21,7 @@ function LoginPage({ onLogin }) {
       const res = await fetch(`${API_BASE}/auth/login/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, username: email, password }),
+        body: JSON.stringify({ username, password }),
       })
       if (!res.ok) {
         const text = await res.text()
@@ -31,7 +31,6 @@ function LoginPage({ onLogin }) {
       onLogin?.({
         name: data?.user?.name || '',
         username: data?.user?.username || '',
-        email: data?.user?.email || email,
         role: data?.user?.role || '',
         token: data?.token || '',
       })
@@ -52,12 +51,12 @@ function LoginPage({ onLogin }) {
         <p className="auth-sub">請先登入以繼續操作</p>
         <form className="form-grid" onSubmit={handleSubmit} style={{ maxWidth: '420px' }}>
           <label>
-            <span>Email</span>
+            <span>使用者名稱</span>
             <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="user@example.com"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="請輸入 username"
               autoComplete="username"
             />
           </label>

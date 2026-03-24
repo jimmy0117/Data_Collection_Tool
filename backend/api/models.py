@@ -5,9 +5,25 @@ from django.db import models
 
 
 class UserProfile(models.Model):
+	ROLE_ADMIN = 'admin'
+	ROLE_RESPONDENT = 'respondent'
+	STATUS_TEST = 'TEST'
+	STATUS_DONE = 'DONE'
+	STATUS_CHECKED = 'CHECKED'
+	ROLE_CHOICES = [
+		(ROLE_ADMIN, 'Admin'),
+		(ROLE_RESPONDENT, 'Respondent'),
+	]
+	STATUS_CHOICES = [
+		(STATUS_TEST, 'Test'),
+		(STATUS_DONE, 'Done'),
+		(STATUS_CHECKED, 'Checked'),
+	]
+
 	user = models.OneToOneField(get_user_model(), on_delete=models.CASCADE, related_name='profile')
 	phone = models.CharField(max_length=50, blank=True)
-	role = models.CharField(max_length=120, blank=True)
+	role = models.CharField(max_length=20, choices=ROLE_CHOICES, default=ROLE_RESPONDENT)
+	subject_status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_TEST)
 	created_at = models.DateTimeField(auto_now_add=True)
 	updated_at = models.DateTimeField(auto_now=True)
 
@@ -19,6 +35,9 @@ class ConsentSignature(models.Model):
 	id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 	user = models.ForeignKey(
 		get_user_model(), on_delete=models.SET_NULL, null=True, blank=True, related_name='consent_signatures'
+	)
+	created_by = models.ForeignKey(
+		get_user_model(), on_delete=models.SET_NULL, null=True, blank=True, related_name='consent_signature_created'
 	)
 	signer_name = models.CharField(max_length=120)
 	signer_email = models.EmailField(blank=True)
@@ -48,6 +67,9 @@ class SignatureCheckLog(models.Model):
 class QuestionnaireSubmission(models.Model):
 	id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 	user = models.ForeignKey(get_user_model(), on_delete=models.SET_NULL, null=True, blank=True)
+	created_by = models.ForeignKey(
+		get_user_model(), on_delete=models.SET_NULL, null=True, blank=True, related_name='questionnaire_created'
+	)
 	questionnaire_id = models.CharField(max_length=120)
 	answers = models.JSONField()
 	submitted_at = models.DateTimeField(auto_now_add=True)
@@ -63,6 +85,9 @@ def recording_upload_path(instance, filename):
 class RecordingClip(models.Model):
 	id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 	user = models.ForeignKey(get_user_model(), on_delete=models.SET_NULL, null=True, blank=True)
+	created_by = models.ForeignKey(
+		get_user_model(), on_delete=models.SET_NULL, null=True, blank=True, related_name='recording_clip_created'
+	)
 	session_id = models.CharField(max_length=64, db_index=True)
 	prompt = models.CharField(max_length=120)
 	phase = models.PositiveIntegerField(default=1)
@@ -76,6 +101,9 @@ class RecordingClip(models.Model):
 class RecordingSession(models.Model):
 	id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 	user = models.ForeignKey(get_user_model(), on_delete=models.SET_NULL, null=True, blank=True)
+	created_by = models.ForeignKey(
+		get_user_model(), on_delete=models.SET_NULL, null=True, blank=True, related_name='recording_session_created'
+	)
 	session_id = models.CharField(max_length=64, unique=True)
 	clip_count = models.PositiveIntegerField(default=0)
 	created_at = models.DateTimeField(auto_now_add=True)

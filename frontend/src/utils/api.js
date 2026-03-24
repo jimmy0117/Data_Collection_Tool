@@ -24,6 +24,11 @@ export const getSessionUser = () => {
   }
 }
 
+export const isAdminUser = () => {
+  const user = getSessionUser()
+  return user?.role === 'admin'
+}
+
 export const authHeaders = (headers = {}) => {
   const token = getSessionToken()
   if (!token) return { ...headers }
@@ -33,4 +38,11 @@ export const authHeaders = (headers = {}) => {
 export const authedFetch = (url, options = {}) => {
   const mergedHeaders = authHeaders(options.headers || {})
   return fetch(url, { ...options, headers: mergedHeaders })
+}
+
+export const fetchRespondents = async () => {
+  const res = await authedFetch(`${API_BASE}/admin/respondents/`)
+  if (!res.ok) throw new Error('無法載入受測者清單')
+  const data = await res.json()
+  return Array.isArray(data) ? data : []
 }

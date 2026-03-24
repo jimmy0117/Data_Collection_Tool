@@ -32,6 +32,7 @@ function DashboardPage() {
   const [questionnaireCount, setQuestionnaireCount] = useState(0)
   const [recordingCount, setRecordingCount] = useState(0)
   const [userName, setUserName] = useState('User')
+  const [subjectStatus, setSubjectStatus] = useState('TEST')
 
   useEffect(() => {
     const saved = window.localStorage.getItem('sessionUser')
@@ -58,6 +59,11 @@ function DashboardPage() {
       .then((res) => (res.ok ? res.json() : Promise.reject(res)))
       .then((data) => setRecordingCount(Array.isArray(data) ? data.length : 0))
       .catch(() => setRecordingCount(0))
+
+    authedFetch(`${API_BASE}/profile/`)
+      .then((res) => (res.ok ? res.json() : Promise.reject(res)))
+      .then((data) => setSubjectStatus(data?.subject_status || 'TEST'))
+      .catch(() => setSubjectStatus('TEST'))
   }, [])
 
   return (
@@ -70,7 +76,7 @@ function DashboardPage() {
         </div>
         <div className="hero-time">
           <div className="time-label">目前狀態</div>
-          <div className="time-value">TEST</div>
+          <div className="time-value">{subjectStatus}</div>
         </div>
       </section>
 
@@ -80,7 +86,7 @@ function DashboardPage() {
           value={`${signedConsents}/${totalConsents}`}
           hint={signedConsents >= totalConsents ? '已完成簽署' : '尚未簽署完'}
         />
-        <StatCard title="我的分析報告" value="0" hint="尚未建立報告" />
+        {/* <StatCard title="我的分析報告" value="0" hint="尚未建立報告" /> */}
         <StatCard title="問卷作答次數" value={questionnaireCount} hint={questionnaireCount > 0 ? '已填寫問卷' : '等待填寫'} />
         <StatCard title="錄音上傳" value={recordingCount} hint={recordingCount > 0 ? '已完成錄音流程' : '尚未上傳'} />
       </div>
@@ -91,7 +97,7 @@ function DashboardPage() {
           <ActionCard title="資料授權" desc="先完成同意書簽署" to="/consents" />
           <ActionCard title="填寫問卷" desc="完成預設的篩檢問卷" to="/questionnaires" />
           <ActionCard title="開始錄音" desc="依指示錄製音檔" to="/recordings" />
-          <ActionCard title="檢視報告" desc="查看您的耳相分析與睡眠評估" to="/dashboard" />
+          <ActionCard title="檢視報告" desc="查看您的嗓音分析報告" to="/dashboard" />
         </div>
       </section>
     </div>

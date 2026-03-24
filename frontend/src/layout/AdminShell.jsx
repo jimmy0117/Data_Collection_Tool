@@ -2,15 +2,14 @@ import { NavLink } from 'react-router-dom'
 import '../App.css'
 
 const navItems = [
-  { path: '/dashboard', label: '儀表板' },
-  { path: '/consents', label: '資料授權' },
-  { path: '/questionnaires', label: '問卷填寫' },
-  { path: '/recordings', label: '錄音收案' },
-  { path: '/questionnaire-records', label: '作答紀錄' },
-  { path: '/account', label: '帳號管理' },
+  { path: '/admin/dashboard', label: '儀表板' },
+  { path: '/admin/subjects', label: '受測者管理' },
+  { path: '/admin/consents', label: '代簽同意書' },
+  { path: '/admin/questionnaires', label: '代填問卷' },
+  { path: '/admin/recordings', label: '代收錄音' },
 ]
 
-function PageShell({ user, onLogout, children }) {
+function AdminShell({ user, onLogout, children }) {
   return (
     <div className="page-shell">
       <header className="topbar">
@@ -19,7 +18,7 @@ function PageShell({ user, onLogout, children }) {
             <span className="brand-mark">喉</span>
             <div>
               <div className="brand-name">嗓音檢測分析平台</div>
-              <div className="brand-sub">研究用 Version0.3</div>
+              <div className="brand-sub">管理員介面 Version0.3</div>
             </div>
           </div>
           <nav className="nav">
@@ -32,10 +31,10 @@ function PageShell({ user, onLogout, children }) {
           </nav>
         </div>
         <div className="user-chip">
-          <div className="avatar">{(user?.username || user?.name || 'U')?.[0]?.toUpperCase()}</div>
+          <div className="avatar">A</div>
           <div>
-            <div className="user-name">{user?.username || user?.name || 'User'}</div>
-            <div className="user-role">{user?.role || '角色'}</div>
+            <div className="user-name">{user?.username || 'admin'}</div>
+            <div className="user-role">管理員</div>
           </div>
           {onLogout && (
             <button type="button" className="ghost-btn logout-btn" onClick={onLogout}>
@@ -52,4 +51,4 @@ function PageShell({ user, onLogout, children }) {
   )
 }
 
-export default PageShell
+export default AdminShell
