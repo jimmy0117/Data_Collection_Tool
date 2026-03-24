@@ -233,10 +233,10 @@ function ConsentPage() {
         onDelete={handleDelete}
       />
 
-      <div className="placeholder-card" style={{ marginTop: '14px' }}>
+      {/* <div className="placeholder-card" style={{ marginTop: '14px' }}>
         <div className="placeholder-title">簽署方式（之後可串接）</div>
         <p className="placeholder-desc">1) 內嵌 PDF + 手寫/打勾簽署；2) 上傳已簽紙本掃描；3) 透過第三方電子簽章服務。完成後更新簽署狀態。</p>
-      </div>
+      </div> */}
 
       {showModal && (
         <div className="consent-modal-backdrop" onClick={() => setShowModal(false)}>

@@ -6,6 +6,7 @@ const navItems = [
   { path: '/consents', label: '資料授權' },
   { path: '/questionnaires', label: '問卷填寫' },
   { path: '/recordings', label: '錄音收案' },
+  { path: '/questionnaire-records', label: '作答紀錄' },
   { path: '/account', label: '帳號管理' },
 ]
 

@@ -1,19 +1,11 @@
 import { useEffect, useState } from 'react'
-import mockUser from '../data/mockUser'
-
 const API_BASE = 'http://localhost:8000/api'
-const STORAGE_KEY = 'accountProfile'
 
 function AccountPage() {
-  const fallbackProfile = {
-    name: mockUser.name || '',
-    email: mockUser.email || '',
-    phone: mockUser.phone || '',
-    role: mockUser.role || '',
-  }
+  const emptyProfile = { name: '', email: '', phone: '', role: '' }
 
-  const [profile, setProfile] = useState(fallbackProfile)
-  const [status, setStatus] = useState('')
+  const [profile, setProfile] = useState(emptyProfile)
+  const [status, setStatus] = useState('載入中…')
   const [saving, setSaving] = useState(false)
   const [file, setFile] = useState(null)
   const [previewUrl, setPreviewUrl] = useState('')
@@ -21,29 +13,20 @@ function AccountPage() {
   const [uploading, setUploading] = useState(false)
 
   useEffect(() => {
-    const saved = window.localStorage.getItem(STORAGE_KEY)
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved)
-        setProfile((prev) => ({ ...prev, ...parsed }))
-      } catch (err) {
-        console.warn('Failed to parse saved profile', err)
-      }
-    }
-    // Load from backend
     fetch(`${API_BASE}/profile/`)
-      .then((res) => res.ok ? res.json() : Promise.reject(res))
+      .then((res) => (res.ok ? res.json() : Promise.reject(res)))
       .then((data) => {
-        setProfile((prev) => ({
-          ...prev,
-          name: data?.user?.first_name || data?.user?.username || prev.name,
-          email: data?.user?.email || prev.email,
-          phone: data?.phone || prev.phone,
-          role: data?.role || prev.role,
-        }))
+        setProfile({
+          name: data?.user?.first_name || data?.user?.username || '',
+          email: data?.user?.email || '',
+          phone: data?.phone || '',
+          role: data?.role || '',
+        })
+        setStatus('已載入')
       })
       .catch((err) => {
-        console.warn('Profile fetch failed, using local data', err)
+        console.warn('Profile fetch failed', err)
+        setStatus('載入失敗，請稍後重試')
       })
   }, [])
 
@@ -58,7 +41,6 @@ function AccountPage() {
       return
     }
     setSaving(true)
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(profile))
     try {
       const payload = {
         email: profile.email,
@@ -72,18 +54,18 @@ function AccountPage() {
         body: JSON.stringify(payload),
       })
       if (!res.ok) throw new Error('save failed')
-      setStatus('已儲存（同步後端）')
+      setStatus('已儲存並同步後端')
     } catch (err) {
       console.error(err)
-      setStatus('後端儲存失敗，已保留本地暫存')
+      setStatus('後端儲存失敗，請重試')
     } finally {
       setSaving(false)
     }
   }
 
   const handleReset = () => {
-    setProfile(fallbackProfile)
-    setStatus('已重設為預設資料')
+    setProfile(emptyProfile)
+    setStatus('已清空表單')
   }
 
   const handleFileChange = (event) => {
@@ -135,7 +117,7 @@ function AccountPage() {
   return (
     <div className="panel">
       <h2>帳號管理</h2>
-      <p>維護個人基本資料（目前以瀏覽器暫存示意）。</p>
+      <p>維護個人基本資料（直接串接後端資料表）。</p>
 
       <form className="form-grid" onSubmit={(e) => e.preventDefault()}>
         <label>

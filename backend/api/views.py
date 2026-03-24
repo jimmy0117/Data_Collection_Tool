@@ -89,6 +89,16 @@ class QuestionnaireSubmissionView(APIView):
 		return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class QuestionnaireSubmissionDetailView(APIView):
+	def delete(self, request, submission_id):
+		try:
+			item = QuestionnaireSubmission.objects.get(id=submission_id)
+			item.delete()
+			return Response(status=status.HTTP_204_NO_CONTENT)
+		except QuestionnaireSubmission.DoesNotExist:
+			return Response({'detail': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
 class ProfileView(APIView):
 	parser_classes = [JSONParser]
 
@@ -150,3 +160,16 @@ class RecordingSessionView(APIView):
 			serializer.save(user=user)
 			return Response(serializer.data, status=status.HTTP_201_CREATED)
 		return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class RecordingSessionDetailView(APIView):
+	def delete(self, request, session_id):
+		try:
+			session = RecordingSession.objects.get(id=session_id)
+		except RecordingSession.DoesNotExist:
+			return Response({'detail': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+
+		# delete associated clips sharing the session_id string
+		RecordingClip.objects.filter(session_id=session.session_id).delete()
+		session.delete()
+		return Response(status=status.HTTP_204_NO_CONTENT)

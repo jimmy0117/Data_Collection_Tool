@@ -4,6 +4,7 @@ import './App.css'
 import PageShell from './layout/PageShell'
 import DashboardPage from './pages/DashboardPage'
 import QuestionnairesPage from './pages/QuestionnairesPage'
+import QuestionnaireRecordsPage from './pages/QuestionnaireRecordsPage'
 import RecordingPage from './pages/RecordingPage'
 import ConsentPage from './pages/ConsentPage'
 import AccountPage from './pages/AccountPage'
@@ -49,6 +50,7 @@ function App() {
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/questionnaires" element={<QuestionnairesPage />} />
+            <Route path="/questionnaire-records" element={<QuestionnaireRecordsPage />} />
             <Route path="/recordings" element={<RecordingPage />} />
             <Route path="/consents" element={<ConsentPage />} />
             <Route path="/account" element={<AccountPage />} />

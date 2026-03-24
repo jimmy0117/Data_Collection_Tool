@@ -98,10 +98,13 @@
 .nav {
   display: flex;
   flex-direction: row;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 10px;
   padding: 0 8px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #c7d2fe transparent;
 }
 
 .nav-link {
@@ -658,6 +661,7 @@ button:disabled {
   color: #fff;
   border-color: #ef4444;
   padding: 8px 12px;
+  white-space: nowrap;
 }
 
 .logout-btn:hover {
@@ -672,7 +676,7 @@ button:disabled {
 
   .nav {
     flex-direction: row;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 8px;
     padding: 0;
     overflow-x: auto;

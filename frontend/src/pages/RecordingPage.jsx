@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 function RecordingPage() {
@@ -20,7 +20,6 @@ function RecordingPage() {
   const [phraseIndex, setPhraseIndex] = useState(0) // for grouped tasks
   const [clips, setClips] = useState([])
   const [stepReady, setStepReady] = useState(false)
-  const deleteClip = useMemo(() => handleDeleteClipFactory(setClips), [])
   const [promptDone, setPromptDone] = useState(new Set())
 
   const noiseStreamRef = useRef(null)
@@ -30,6 +29,41 @@ function RecordingPage() {
   const chunksRef = useRef([])
   const sessionIdRef = useRef(typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}`)
   const clipCountRef = useRef(0)
+
+  const deleteClip = useCallback(
+    (idx) => {
+      let nextPromptSet = null
+      let removedPrompt = null
+      let removedPhase = null
+
+      setClips((prev) => {
+        const next = [...prev]
+        const [removed] = next.splice(idx, 1)
+        if (removed?.url) URL.revokeObjectURL(removed.url)
+        nextPromptSet = new Set(next.map((c) => c.prompt))
+        removedPrompt = removed?.prompt
+        removedPhase = removed?.phase
+        return next
+      })
+
+      if (nextPromptSet) {
+        setPromptDone(nextPromptSet)
+      }
+
+      if (removedPrompt) {
+        if (removedPhase === 1) {
+          const idxInVowel = vowelPrompts.indexOf(removedPrompt)
+          if (idxInVowel >= 0) setPromptIndex(idxInVowel)
+          setPhase(1)
+        } else if (removedPhase === 2) {
+          const idxInPhrase = phraseGroups.indexOf(removedPrompt)
+          if (idxInPhrase >= 0) setPhraseIndex(idxInPhrase)
+          setPhase(2)
+        }
+      }
+    },
+    [phraseGroups, setClips, setPhraseIndex, setPhase, setPromptDone, setPromptIndex, vowelPrompts],
+  )
 
   const uploadClip = async (blob, promptText, phaseValue) => {
     const formData = new FormData()
@@ -332,16 +366,4 @@ function RecordingPage() {
     </div>
   )
 }
-
-  function handleDeleteClipFactory(setClips) {
-    return (idx) => {
-      setClips((prev) => {
-        const next = [...prev]
-        const [removed] = next.splice(idx, 1)
-        if (removed?.url) URL.revokeObjectURL(removed.url)
-        return next
-      })
-    }
-  }
-
 export default RecordingPage
