@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
-
-const API_BASE = 'http://localhost:8000/api'
+import { API_BASE, authedFetch } from '../utils/api'
 
 const VHI_ITEMS = [
   '說話時會上氣不接下氣',
@@ -40,7 +39,7 @@ function QuestionnairesPage() {
           responses: VHI_ITEMS.map((q, idx) => ({ question: q, score: Number(answers[idx] || 0) })),
         },
       }
-      const res = await fetch(`${API_BASE}/questionnaires/`, {
+      const res = await authedFetch(`${API_BASE}/questionnaires/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

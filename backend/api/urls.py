@@ -9,6 +9,7 @@ from .views import (
     RecordingClipView,
     RecordingSessionView,
     RecordingSessionDetailView,
+    LoginView,
 )
 
 urlpatterns = [
@@ -21,4 +22,5 @@ urlpatterns = [
     path('recordings/', RecordingClipView.as_view(), name='recording-clips'),
     path('recording-sessions/', RecordingSessionView.as_view(), name='recording-sessions'),
     path('recording-sessions/<uuid:session_id>/', RecordingSessionDetailView.as_view(), name='recording-sessions-detail'),
+    path('auth/login/', LoginView.as_view(), name='login'),
 ]

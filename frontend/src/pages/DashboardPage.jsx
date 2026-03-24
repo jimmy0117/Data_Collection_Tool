@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react'
-import mockUser from '../data/mockUser'
 import { NavLink } from 'react-router-dom'
-
-const API_BASE = 'http://localhost:8000/api'
+import { API_BASE, authedFetch } from '../utils/api'
 
 function StatCard({ title, value, hint }) {
   return (
@@ -33,19 +31,30 @@ function DashboardPage() {
   const [signedConsents, setSignedConsents] = useState(0)
   const [questionnaireCount, setQuestionnaireCount] = useState(0)
   const [recordingCount, setRecordingCount] = useState(0)
+  const [userName, setUserName] = useState('User')
 
   useEffect(() => {
-    fetch(`${API_BASE}/signatures/`)
+    const saved = window.localStorage.getItem('sessionUser')
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved)
+        setUserName(parsed?.user?.username || parsed?.user?.name || 'User')
+      } catch (err) {
+        console.warn('invalid session cache')
+      }
+    }
+
+    authedFetch(`${API_BASE}/signatures/`)
       .then((res) => (res.ok ? res.json() : Promise.reject(res)))
       .then((data) => setSignedConsents(data.length))
       .catch(() => setSignedConsents(0))
 
-    fetch(`${API_BASE}/questionnaires/`)
+    authedFetch(`${API_BASE}/questionnaires/`)
       .then((res) => (res.ok ? res.json() : Promise.reject(res)))
       .then((data) => setQuestionnaireCount(Array.isArray(data) ? data.length : 0))
       .catch(() => setQuestionnaireCount(0))
 
-    fetch(`${API_BASE}/recording-sessions/`)
+    authedFetch(`${API_BASE}/recording-sessions/`)
       .then((res) => (res.ok ? res.json() : Promise.reject(res)))
       .then((data) => setRecordingCount(Array.isArray(data) ? data.length : 0))
       .catch(() => setRecordingCount(0))
@@ -56,7 +65,7 @@ function DashboardPage() {
       <section className="hero">
         <div>
           <div className="hero-eyebrow">您好</div>
-          <h1 className="hero-title">{mockUser.name}</h1>
+          <h1 className="hero-title">{userName}</h1>
           <p className="hero-sub">歡迎使用嗓音檢測分析平台，以下是您的個人概要。</p>
         </div>
         <div className="hero-time">

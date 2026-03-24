@@ -19,7 +19,7 @@ function PageShell({ user, onLogout, children }) {
             <span className="brand-mark">喉</span>
             <div>
               <div className="brand-name">嗓音檢測分析平台</div>
-              <div className="brand-sub">研究用 Version0.1</div>
+              <div className="brand-sub">研究用 Version0.2</div>
             </div>
           </div>
           <nav className="nav">
@@ -32,9 +32,9 @@ function PageShell({ user, onLogout, children }) {
           </nav>
         </div>
         <div className="user-chip">
-          <div className="avatar">{user?.name?.[0]?.toUpperCase() || 'U'}</div>
+          <div className="avatar">{(user?.username || user?.name || 'U')?.[0]?.toUpperCase()}</div>
           <div>
-            <div className="user-name">{user?.name || 'User'}</div>
+            <div className="user-name">{user?.username || user?.name || 'User'}</div>
             <div className="user-role">{user?.role || '角色'}</div>
           </div>
           {onLogout && (

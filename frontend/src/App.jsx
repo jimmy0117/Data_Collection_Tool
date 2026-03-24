@@ -9,18 +9,19 @@ import RecordingPage from './pages/RecordingPage'
 import ConsentPage from './pages/ConsentPage'
 import AccountPage from './pages/AccountPage'
 import LoginPage from './pages/LoginPage'
-import mockUser from './data/mockUser'
-
 const SESSION_KEY = 'sessionUser'
 
 function App() {
   const [user, setUser] = useState(null)
+  const [token, setToken] = useState('')
 
   useEffect(() => {
     const saved = window.localStorage.getItem(SESSION_KEY)
     if (saved) {
       try {
-        setUser(JSON.parse(saved))
+        const parsed = JSON.parse(saved)
+        setUser(parsed.user || null)
+        setToken(parsed.token || '')
       } catch (err) {
         console.warn('invalid session cache')
       }
@@ -28,17 +29,20 @@ function App() {
   }, [])
 
   const handleLogin = (payload) => {
-    const next = {
-      name: payload.name || mockUser.name,
-      email: payload.email || mockUser.email,
-      role: payload.role || mockUser.role,
+    const nextUser = {
+      name: payload.name,
+      username: payload.username,
+      email: payload.email,
+      role: payload.role,
     }
-    setUser(next)
-    window.localStorage.setItem(SESSION_KEY, JSON.stringify(next))
+    setUser(nextUser)
+    setToken(payload.token || '')
+    window.localStorage.setItem(SESSION_KEY, JSON.stringify({ user: nextUser, token: payload.token || '' }))
   }
 
   const handleLogout = () => {
     setUser(null)
+    setToken('')
     window.localStorage.removeItem(SESSION_KEY)
   }
 

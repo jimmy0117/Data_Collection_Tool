@@ -313,6 +313,7 @@
 .task-index {
   font-weight: 800;
   color: #4b5563;
+  text-align: center;
 }
 
 .consent-section {
@@ -458,10 +459,16 @@
 }
 
 .status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 8px 10px;
+  min-height: 32px;
   border-radius: 999px;
   font-weight: 700;
   font-size: 12px;
+  line-height: 1.2;
+  text-align: center;
   border: 1px solid #d5d9e2;
   background: #f3f6fb;
   color: #334155;
@@ -590,12 +597,17 @@ input:focus {
 }
 
 button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 10px 14px;
   border-radius: 12px;
   border: 1px solid #365ad3;
   background: linear-gradient(135deg, #4b7bff, #7ed8c2);
   color: #fff;
   font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
   cursor: pointer;
   transition: transform 0.12s ease, box-shadow 0.12s ease;
 }

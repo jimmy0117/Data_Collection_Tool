@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-const API_BASE = 'http://localhost:8000/api'
+import { API_BASE, authedFetch } from '../utils/api'
 
 function AccountPage() {
   const emptyProfile = { name: '', email: '', phone: '', role: '' }
@@ -13,7 +13,7 @@ function AccountPage() {
   const [uploading, setUploading] = useState(false)
 
   useEffect(() => {
-    fetch(`${API_BASE}/profile/`)
+    authedFetch(`${API_BASE}/profile/`)
       .then((res) => (res.ok ? res.json() : Promise.reject(res)))
       .then((data) => {
         setProfile({
@@ -48,7 +48,7 @@ function AccountPage() {
         phone: profile.phone,
         role: profile.role,
       }
-      const res = await fetch(`${API_BASE}/profile/`, {
+      const res = await authedFetch(`${API_BASE}/profile/`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -93,7 +93,7 @@ function AccountPage() {
       formData.append('signer_name', profile.name || '未填寫姓名')
       formData.append('signer_email', profile.email || '')
 
-      const res = await fetch(`${API_BASE}/signatures/`, {
+      const res = await authedFetch(`${API_BASE}/signatures/`, {
         method: 'POST',
         body: formData,
       })
@@ -134,7 +134,7 @@ function AccountPage() {
         </label>
         <label>
           <span>角色</span>
-          <input type="text" value={profile.role} onChange={(e) => handleChange('role', e.target.value)} />
+          <input type="text" value={profile.role} disabled readOnly />
         </label>
         <div className="form-actions">
           <button type="button" disabled={saving} onClick={handleSave}>

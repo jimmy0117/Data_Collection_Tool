@@ -20,6 +20,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         user_data = validated_data.pop('user', {})
+        validated_data.pop('role', None)
         user = instance.user
         user.first_name = user_data.get('first_name', user.first_name)
         user.last_name = user_data.get('last_name', user.last_name)
@@ -46,6 +47,7 @@ class ConsentSignatureSerializer(serializers.ModelSerializer):
         model = ConsentSignature
         fields = [
             'id',
+            'user',
             'signer_name',
             'signer_email',
             'doc_label',
@@ -55,7 +57,7 @@ class ConsentSignatureSerializer(serializers.ModelSerializer):
             'checked_at',
             'created_at',
         ]
-        read_only_fields = ['id', 'created_at', 'checked_at']
+        read_only_fields = ['id', 'created_at', 'checked_at', 'user', 'detection_status', 'detection_notes']
 
 
 class SignatureCheckLogSerializer(serializers.ModelSerializer):
@@ -69,7 +71,7 @@ class QuestionnaireSubmissionSerializer(serializers.ModelSerializer):
     class Meta:
         model = QuestionnaireSubmission
         fields = ['id', 'user', 'questionnaire_id', 'answers', 'submitted_at']
-        read_only_fields = ['id', 'submitted_at']
+        read_only_fields = ['id', 'submitted_at', 'user']
 
 
 class RecordingClipSerializer(serializers.ModelSerializer):

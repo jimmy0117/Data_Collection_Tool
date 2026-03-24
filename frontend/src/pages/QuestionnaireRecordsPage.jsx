@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
-
-const API_BASE = 'http://localhost:8000/api'
+import { API_BASE, authedFetch } from '../utils/api'
 
 function QuestionnaireRecordsPage() {
   const [qRecords, setQRecords] = useState([])
@@ -17,7 +16,7 @@ function QuestionnaireRecordsPage() {
       setLoadingQ(true)
       setQStatus('載入中…')
       try {
-        const res = await fetch(`${API_BASE}/questionnaires/`)
+        const res = await authedFetch(`${API_BASE}/questionnaires/`)
         if (!res.ok) throw new Error('fetch failed')
         const data = await res.json()
         setQRecords(Array.isArray(data) ? data : [])
@@ -34,7 +33,7 @@ function QuestionnaireRecordsPage() {
       setLoadingR(true)
       setRStatus('載入中…')
       try {
-        const res = await fetch(`${API_BASE}/recording-sessions/`)
+        const res = await authedFetch(`${API_BASE}/recording-sessions/`)
         if (!res.ok) throw new Error('fetch failed')
         const data = await res.json()
         setRRecords(Array.isArray(data) ? data : [])
@@ -57,7 +56,7 @@ function QuestionnaireRecordsPage() {
     if (!ok) return
     setDeletingId(id)
     try {
-      const res = await fetch(`${API_BASE}/questionnaires/${id}/`, { method: 'DELETE' })
+      const res = await authedFetch(`${API_BASE}/questionnaires/${id}/`, { method: 'DELETE' })
       if (!res.ok && res.status !== 204) throw new Error('delete failed')
       setQRecords((prev) => prev.filter((item) => item.id !== id))
       setQStatus((prev) => (prev || prev === '' ? prev : ''))
@@ -75,7 +74,7 @@ function QuestionnaireRecordsPage() {
     if (!ok) return
     setDeletingSessionId(id)
     try {
-      const res = await fetch(`${API_BASE}/recording-sessions/${id}/`, { method: 'DELETE' })
+      const res = await authedFetch(`${API_BASE}/recording-sessions/${id}/`, { method: 'DELETE' })
       if (!res.ok && res.status !== 204) throw new Error('delete failed')
       setRRecords((prev) => prev.filter((item) => item.id !== id))
       setRStatus((prev) => (prev || prev === '' ? prev : ''))

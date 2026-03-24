@@ -17,6 +17,9 @@ class UserProfile(models.Model):
 
 class ConsentSignature(models.Model):
 	id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+	user = models.ForeignKey(
+		get_user_model(), on_delete=models.SET_NULL, null=True, blank=True, related_name='consent_signatures'
+	)
 	signer_name = models.CharField(max_length=120)
 	signer_email = models.EmailField(blank=True)
 	doc_label = models.CharField(max_length=120)

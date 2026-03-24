@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import mockUser from '../data/mockUser'
+import { API_BASE } from '../utils/api'
 
 function LoginPage({ onLogin }) {
-  const [email, setEmail] = useState(mockUser.email)
-  const [name, setName] = useState(mockUser.name)
-  const [role, setRole] = useState(mockUser.role)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [status, setStatus] = useState('')
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
@@ -14,16 +13,36 @@ function LoginPage({ onLogin }) {
     document.title = '登入 · 嗓音檢測平台'
   }, [])
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
     setStatus('')
-    setTimeout(() => {
-      onLogin?.({ email, name, role })
+    try {
+      const res = await fetch(`${API_BASE}/auth/login/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, username: email, password }),
+      })
+      if (!res.ok) {
+        const text = await res.text()
+        throw new Error(text || 'login failed')
+      }
+      const data = await res.json()
+      onLogin?.({
+        name: data?.user?.name || '',
+        username: data?.user?.username || '',
+        email: data?.user?.email || email,
+        role: data?.user?.role || '',
+        token: data?.token || '',
+      })
       setStatus('已登入')
       navigate('/dashboard', { replace: true })
+    } catch (err) {
+      console.error(err)
+      setStatus('登入失敗，請確認帳號密碼')
+    } finally {
       setLoading(false)
-    }, 200)
+    }
   }
 
   return (
@@ -33,16 +52,24 @@ function LoginPage({ onLogin }) {
         <p className="auth-sub">請先登入以繼續操作</p>
         <form className="form-grid" onSubmit={handleSubmit} style={{ maxWidth: '420px' }}>
           <label>
-            <span>姓名</span>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="研究助理" />
-          </label>
-          <label>
             <span>Email</span>
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="user@example.com" />
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="user@example.com"
+              autoComplete="username"
+            />
           </label>
           <label>
-            <span>角色</span>
-            <input value={role} onChange={(e) => setRole(e.target.value)} placeholder="研究員 / 助理" />
+            <span>密碼</span>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="請輸入密碼"
+              autoComplete="current-password"
+            />
           </label>
           <div className="form-actions">
             <button type="submit" disabled={loading}>

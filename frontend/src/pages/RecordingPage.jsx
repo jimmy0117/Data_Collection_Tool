@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { API_BASE, authedFetch } from '../utils/api'
 
 function RecordingPage() {
   const navigate = useNavigate()
-  const API_BASE = 'http://localhost:8000/api'
   const vowelPrompts = ['/a/', '/i/', '/u/', '/ɛ/', '/ə/']
   const phraseGroups = [
     '請讀出鼻音 /m/, /n/ 各 2–3 秒 × 2；再連續念 6–10 次「pa-ta-ka」。',
@@ -73,7 +73,7 @@ function RecordingPage() {
     formData.append('session_id', sessionIdRef.current)
 
     try {
-      await fetch(`${API_BASE}/recordings/`, {
+      await authedFetch(`${API_BASE}/recordings/`, {
         method: 'POST',
         body: formData,
       })
@@ -84,7 +84,7 @@ function RecordingPage() {
 
   const submitSessionLog = async (clipCount) => {
     try {
-      await fetch(`${API_BASE}/recording-sessions/`, {
+      await authedFetch(`${API_BASE}/recording-sessions/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

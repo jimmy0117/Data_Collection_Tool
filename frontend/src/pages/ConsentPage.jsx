@@ -1,9 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import SignaturePad from 'signature_pad'
-import mockUser from '../data/mockUser'
 import consentPdf from '../assets/資料授權同意書.pdf'
-
-const API_BASE = 'http://localhost:8000/api'
+import { API_BASE, authedFetch, getSessionUser } from '../utils/api'
 
 function ConsentSection({ label, items, prefix, onSign, onPreview, canSign, onDelete, isSigned }) {
   return (
@@ -72,6 +70,7 @@ function ConsentPage() {
   const [signatureMap, setSignatureMap] = useState(new Map())
   const [showPreview, setShowPreview] = useState(false)
   const [previewDoc, setPreviewDoc] = useState(null)
+  const [sessionUser, setSessionUser] = useState(null)
   const canvasRef = useRef(null)
   const padRef = useRef(null)
 
@@ -131,17 +130,26 @@ function ConsentPage() {
       const formData = new FormData()
       formData.append('signature_file', blob, 'signature.png')
       formData.append('doc_label', activeDoc?.key || activeDoc?.title || '同意書')
-      formData.append('signer_name', mockUser.name)
-      formData.append('signer_email', mockUser.email)
+      formData.append('signer_name', sessionUser?.name || sessionUser?.username || '未填寫姓名')
+      formData.append('signer_email', sessionUser?.email || '')
 
-      const res = await fetch(`${API_BASE}/signatures/`, {
+      const res = await authedFetch(`${API_BASE}/signatures/`, {
         method: 'POST',
         body: formData,
       })
 
       if (!res.ok) {
-        const err = await res.text()
-        throw new Error(err)
+        let detail = ''
+        try {
+          const body = await res.json()
+          detail = body?.detail || JSON.stringify(body)
+        } catch {
+          detail = await res.text()
+        }
+        if (res.status === 401) {
+          throw new Error('登入已失效，請重新登入')
+        }
+        throw new Error(detail || '上傳失敗')
       }
       const saved = await res.json()
       setStatusMsg('簽名已上傳')
@@ -157,7 +165,7 @@ function ConsentPage() {
       }
       setShowModal(false)
     } catch (err) {
-      setStatusMsg('上傳失敗，請稍後再試')
+      setStatusMsg(err?.message || '上傳失敗，請稍後再試')
       console.error(err)
     }
   }
@@ -166,7 +174,7 @@ function ConsentPage() {
     const sigId = signatureMap.get(key)
     if (!sigId) return
     try {
-      const res = await fetch(`${API_BASE}/signatures/${sigId}/`, { method: 'DELETE' })
+      const res = await authedFetch(`${API_BASE}/signatures/${sigId}/`, { method: 'DELETE' })
       if (!res.ok && res.status !== 204) throw new Error('delete failed')
       setSignedDocs((prev) => {
         const next = new Set(prev)
@@ -186,7 +194,9 @@ function ConsentPage() {
   }
 
   useEffect(() => {
-    fetch(`${API_BASE}/signatures/`)
+    setSessionUser(getSessionUser())
+
+    authedFetch(`${API_BASE}/signatures/`)
       .then((res) => (res.ok ? res.json() : Promise.reject(res)))
       .then((data) => {
         const signed = new Set()
