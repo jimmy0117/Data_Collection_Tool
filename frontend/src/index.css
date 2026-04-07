@@ -36,3 +36,8 @@ a {
   gap: 6px;
   font-size: 14px;
 }
+
+.radio-item span {
+  white-space: nowrap;
+  word-break: keep-all;
+}

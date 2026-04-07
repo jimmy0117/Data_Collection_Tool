@@ -18,7 +18,7 @@ function AdminShell({ user, onLogout, children }) {
             <span className="brand-mark">喉</span>
             <div>
               <div className="brand-name">嗓音檢測分析平台</div>
-              <div className="brand-sub">管理員介面 Version0.3</div>
+              <div className="brand-sub">管理員介面 Version0.4</div>
             </div>
           </div>
           <nav className="nav">
