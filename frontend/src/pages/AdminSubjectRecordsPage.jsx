@@ -7,6 +7,7 @@ function AdminSubjectRecordsPage() {
   const [data, setData] = useState(null)
   const [status, setStatus] = useState('載入中…')
   const [loading, setLoading] = useState(true)
+  const [deletingId, setDeletingId] = useState('')
 
   useEffect(() => {
     const load = async () => {
@@ -27,6 +28,68 @@ function AdminSubjectRecordsPage() {
     }
     if (subjectId) load()
   }, [subjectId])
+
+  const handleDeleteQuestionnaire = async (submissionId) => {
+    if (!subjectId) return
+    const ok = window.confirm('確定要刪除此問卷紀錄嗎？')
+    if (!ok) return
+
+    setDeletingId(`q-${submissionId}`)
+    setStatus('刪除中…')
+    try {
+      const res = await authedFetch(`${API_BASE}/admin/respondents/${subjectId}/questionnaires/${submissionId}/`, {
+        method: 'DELETE',
+      })
+      if (!res.ok) throw new Error('delete failed')
+
+      setData((prev) => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          questionnaires: Array.isArray(prev.questionnaires)
+            ? prev.questionnaires.filter((item) => String(item.id) !== String(submissionId))
+            : [],
+        }
+      })
+      setStatus('已刪除問卷紀錄')
+    } catch (err) {
+      console.error(err)
+      setStatus('刪除問卷紀錄失敗')
+    } finally {
+      setDeletingId('')
+    }
+  }
+
+  const handleDeleteRecordingSession = async (sessionId) => {
+    if (!subjectId) return
+    const ok = window.confirm('確定要刪除此錄音流程紀錄嗎？（同 session 片段也會刪除）')
+    if (!ok) return
+
+    setDeletingId(`r-${sessionId}`)
+    setStatus('刪除中…')
+    try {
+      const res = await authedFetch(`${API_BASE}/admin/respondents/${subjectId}/recording-sessions/${sessionId}/`, {
+        method: 'DELETE',
+      })
+      if (!res.ok) throw new Error('delete failed')
+
+      setData((prev) => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          recording_sessions: Array.isArray(prev.recording_sessions)
+            ? prev.recording_sessions.filter((item) => String(item.id) !== String(sessionId))
+            : [],
+        }
+      })
+      setStatus('已刪除錄音紀錄')
+    } catch (err) {
+      console.error(err)
+      setStatus('刪除錄音紀錄失敗')
+    } finally {
+      setDeletingId('')
+    }
+  }
 
   return (
     <div className="panel">
@@ -58,6 +121,14 @@ function AdminSubjectRecordsPage() {
                           </div>
                         ))}
                         {responses.length > 5 && <div className="clip-sub">… 其餘 {responses.length - 5} 題</div>}
+                        <button
+                          type="button"
+                          className="ghost-btn"
+                          onClick={() => handleDeleteQuestionnaire(item.id)}
+                          disabled={deletingId === `q-${item.id}`}
+                        >
+                          {deletingId === `q-${item.id}` ? '刪除中…' : '刪除'}
+                        </button>
                       </div>
                     </div>
                   )
@@ -80,6 +151,16 @@ function AdminSubjectRecordsPage() {
                       <div className="clip-sub">片段數：{item.clip_count ?? 0}</div>
                       <div className="clip-sub">建立時間：{item.created_at ? new Date(item.created_at).toLocaleString() : '未知'}</div>
                       <div className="clip-sub">操作者：{item.created_by_username || '受測者本人'}</div>
+                    </div>
+                    <div className="clip-actions">
+                      <button
+                        type="button"
+                        className="ghost-btn"
+                        onClick={() => handleDeleteRecordingSession(item.id)}
+                        disabled={deletingId === `r-${item.id}`}
+                      >
+                        {deletingId === `r-${item.id}` ? '刪除中…' : '刪除'}
+                      </button>
                     </div>
                   </div>
                 ))}

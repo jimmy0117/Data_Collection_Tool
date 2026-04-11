@@ -7,9 +7,18 @@ function RecordingPage() {
   const [searchParams] = useSearchParams()
   const vowelPrompts = ['/a/', '/i/', '/u/', '/ɛ/', '/ə/']
   const phraseGroups = [
-    '請讀出鼻音 /m/, /n/ 各 2–3 秒 × 2；再連續念 6–10 次「pa-ta-ka」。',
+    '請讀出鼻音 /m/, /n/ 各 2–3 秒 × 2',
+    '連續念 6–10 次「pa-ta-ka」',
     '請依序念：媽媽、奶奶、哥哥、爸爸，各 2 次，保持清晰與正常語速。',
     '請自然語速數數 1–40，保持穩定。',
+  ]
+  const naturalSentencePrompts = [
+    '爸爸帶弟弟去公園跑步',
+    '哥哥幫媽媽搬東西',
+    '媽媽明天要買牛奶',
+    '妹妹拿麵包給奶奶',
+    '今天下午我和朋友一起去市場買水果',
+    '放學後我和同學一起去打球',
   ]
 
   const [noiseChecked, setNoiseChecked] = useState(false)
@@ -19,6 +28,7 @@ function RecordingPage() {
   const [phase, setPhase] = useState(1)
   const [promptIndex, setPromptIndex] = useState(0) // for vowels
   const [phraseIndex, setPhraseIndex] = useState(0) // for grouped tasks
+  const [sentenceIndex, setSentenceIndex] = useState(0) // for natural sentences
   const [clips, setClips] = useState([])
   const [stepReady, setStepReady] = useState(false)
   const [promptDone, setPromptDone] = useState(new Set())
@@ -64,10 +74,24 @@ function RecordingPage() {
           const idxInPhrase = phraseGroups.indexOf(removedPrompt)
           if (idxInPhrase >= 0) setPhraseIndex(idxInPhrase)
           setPhase(2)
+        } else if (removedPhase === 3) {
+          const idxInSentence = naturalSentencePrompts.indexOf(removedPrompt)
+          if (idxInSentence >= 0) setSentenceIndex(idxInSentence)
+          setPhase(3)
         }
       }
     },
-    [phraseGroups, setClips, setPhraseIndex, setPhase, setPromptDone, setPromptIndex, vowelPrompts],
+    [
+      naturalSentencePrompts,
+      phraseGroups,
+      setClips,
+      setPhraseIndex,
+      setPhase,
+      setPromptDone,
+      setPromptIndex,
+      setSentenceIndex,
+      vowelPrompts,
+    ],
   )
 
   const uploadClip = async (blob, promptText, phaseValue) => {
@@ -203,11 +227,16 @@ function RecordingPage() {
     }
   }
 
-  const promptList = phase === 1 ? vowelPrompts : phraseGroups
-  const currentPrompt = phase === 1 ? vowelPrompts[promptIndex] : phraseGroups[phraseIndex]
+  const promptList = phase === 1 ? vowelPrompts : phase === 2 ? phraseGroups : naturalSentencePrompts
+  const currentPrompt =
+    phase === 1 ? vowelPrompts[promptIndex] : phase === 2 ? phraseGroups[phraseIndex] : naturalSentencePrompts[sentenceIndex]
   const allDoneCurrentPhase = phase === 1 ? promptDone.size >= promptList.length : promptDone.has(currentPrompt)
-  const allDoneAll = phase === 2 && phraseIndex === phraseGroups.length - 1 && promptDone.has(currentPrompt)
+  const allDonePhase2 = phase === 2 && phraseIndex === phraseGroups.length - 1 && promptDone.has(currentPrompt)
+  const allDoneAll = phase === 3 && sentenceIndex === naturalSentencePrompts.length - 1 && promptDone.has(currentPrompt)
   const canAdvancePrompt = promptDone.has(currentPrompt)
+  const isLastPromptInPhase =
+    (phase === 2 && phraseIndex === phraseGroups.length - 1) ||
+    (phase === 3 && sentenceIndex === naturalSentencePrompts.length - 1)
 
   const handleStart = async () => {
     if (sessionUser?.role === 'admin' && !targetUserId) {
@@ -257,10 +286,17 @@ function RecordingPage() {
   const handleNextPrompt = () => {
     if (phase === 1) {
       setPromptIndex((prev) => (prev + 1) % vowelPrompts.length)
-    } else {
+    } else if (phase === 2) {
       if (!promptDone.has(currentPrompt)) return
       if (phraseIndex < phraseGroups.length - 1) {
         setPhraseIndex((prev) => prev + 1)
+        setPromptDone(new Set())
+        setClips([])
+      }
+    } else {
+      if (!promptDone.has(currentPrompt)) return
+      if (sentenceIndex < naturalSentencePrompts.length - 1) {
+        setSentenceIndex((prev) => prev + 1)
         setPromptDone(new Set())
         setClips([])
       }
@@ -272,26 +308,25 @@ function RecordingPage() {
       <h2>錄音收案</h2>
       <p>流程示意：先檢測環境噪音，通過後開始錄製，介面會逐一提示要念的內容。後續可串接麥克風錄音、分段儲存與檔案上傳。</p>
 
-      {sessionUser?.role === 'admin' && (
-        <div className="form-grid" style={{ maxWidth: '600px', marginBottom: '12px' }}>
-          <label>
-            <span>代收錄音受測者 *</span>
-            <select value={targetUserId} onChange={(e) => setTargetUserId(e.target.value)}>
-              <option value="">請選擇受測者</option>
-              {respondents.map((subject) => (
-                <option key={subject.id} value={subject.id}>{subject.username}</option>
-              ))}
-            </select>
-          </label>
-          {delegateStatus && <span className="status-pill">{delegateStatus}</span>}
-        </div>
-      )}
-
       <div className="recording-grid">
         {!stepReady && (
           <div className="task-card">
             <div className="task-index">步驟 1</div>
             <div className="task-body">
+              {sessionUser?.role === 'admin' && (
+                <div className="form-grid" style={{ maxWidth: '600px', marginBottom: '12px' }}>
+                  <label>
+                    <span>代收錄音受測者 *</span>
+                    <select value={targetUserId} onChange={(e) => setTargetUserId(e.target.value)}>
+                      <option value="">請選擇受測者</option>
+                      {respondents.map((subject) => (
+                        <option key={subject.id} value={subject.id}>{subject.username}</option>
+                      ))}
+                    </select>
+                  </label>
+                  {delegateStatus && <span className="status-pill">{delegateStatus}</span>}
+                </div>
+              )}
               <div className="task-title">環境噪音檢測</div>
               <div className="task-detail">按下檢測後連續 3 秒保持安靜，通過後才允許開始錄音。</div>
               <div className="status-row" style={{ gap: '10px', alignItems: 'center' }}>
@@ -299,7 +334,12 @@ function RecordingPage() {
                 <button type="button" onClick={handleNoiseCheck} disabled={noiseChecking}>
                   {noiseChecking ? '檢測中…' : '檢測環境噪音'}
                 </button>
-                <button type="button" className="ghost-btn" disabled={!noiseChecked} onClick={() => setStepReady(true)}>
+                <button
+                  type="button"
+                  className="ghost-btn"
+                  disabled={!noiseChecked || (sessionUser?.role === 'admin' && !targetUserId)}
+                  onClick={() => setStepReady(true)}
+                >
                   下一步
                 </button>
               </div>
@@ -309,11 +349,13 @@ function RecordingPage() {
 
         {stepReady && (
           <div className="task-card">
-            <div className="task-index">步驟 2</div>
+            <div className="task-index">步驟 {phase + 1}</div>
             <div className="task-body">
               <div className="task-title">錄音 + 朗讀提示</div>
               <div className="prompt-box">
-                <div className="prompt-label">提示 {phase === 1 ? `#${promptIndex + 1} (元音)` : `#${phraseIndex + 1} (其他題目)`}</div>
+                <div className="prompt-label">
+                  提示 {phase === 1 ? `#${promptIndex + 1} (元音)` : phase === 2 ? `#${phraseIndex + 1} (其他題目)` : `#${sentenceIndex + 1} (自然語句)`}
+                </div>
                 <p className="prompt-text">{currentPrompt}</p>
               </div>
               <div className="controls-row">
@@ -332,7 +374,7 @@ function RecordingPage() {
                   type="button"
                   className="ghost-btn"
                   onClick={handleNextPrompt}
-                  disabled={isRecording || (phase === 2 && (!canAdvancePrompt || phraseIndex === phraseGroups.length - 1))}
+                  disabled={isRecording || (phase !== 1 && (!canAdvancePrompt || isLastPromptInPhase))}
                 >
                   {phase === 1 ? '下一個提示' : '下一個題目'}
                 </button>
@@ -349,6 +391,7 @@ function RecordingPage() {
                       setPhase(2)
                       setPromptIndex(0)
                       setPhraseIndex(0)
+                      setSentenceIndex(0)
                       setPromptDone(new Set())
                       setClips([])
                     }}
@@ -357,6 +400,31 @@ function RecordingPage() {
                   </button>
                 )}
                 {phase === 2 && canAdvancePrompt && phraseIndex < phraseGroups.length - 1 && (
+                  <button
+                    type="button"
+                    className="ghost-btn"
+                    disabled={isRecording}
+                    onClick={handleNextPrompt}
+                  >
+                    下一個題目
+                  </button>
+                )}
+                {allDonePhase2 && (
+                  <button
+                    type="button"
+                    className="ghost-btn"
+                    disabled={isRecording}
+                    onClick={() => {
+                      setPhase(3)
+                      setSentenceIndex(0)
+                      setPromptDone(new Set())
+                      setClips([])
+                    }}
+                  >
+                    下一步：進入自然語句
+                  </button>
+                )}
+                {phase === 3 && canAdvancePrompt && sentenceIndex < naturalSentencePrompts.length - 1 && (
                   <button
                     type="button"
                     className="ghost-btn"

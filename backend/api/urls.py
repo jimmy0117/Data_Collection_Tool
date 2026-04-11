@@ -14,6 +14,8 @@ from .views import (
     AdminRespondentPasswordResetView,
     AdminRespondentMarkCheckedView,
     AdminRespondentMarkDoneView,
+    AdminSubjectQuestionnaireDetailView,
+    AdminSubjectRecordingSessionDetailView,
     LoginView,
 )
 
@@ -29,6 +31,16 @@ urlpatterns = [
     path('recording-sessions/<uuid:session_id>/', RecordingSessionDetailView.as_view(), name='recording-sessions-detail'),
     path('admin/respondents/', RespondentManagementView.as_view(), name='admin-respondents'),
     path('admin/respondents/<int:user_id>/records/', AdminSubjectRecordsView.as_view(), name='admin-subject-records'),
+    path(
+        'admin/respondents/<int:user_id>/questionnaires/<uuid:submission_id>/',
+        AdminSubjectQuestionnaireDetailView.as_view(),
+        name='admin-subject-questionnaire-detail',
+    ),
+    path(
+        'admin/respondents/<int:user_id>/recording-sessions/<uuid:session_id>/',
+        AdminSubjectRecordingSessionDetailView.as_view(),
+        name='admin-subject-recording-session-detail',
+    ),
     path('admin/respondents/<int:user_id>/reset-password/', AdminRespondentPasswordResetView.as_view(), name='admin-respondent-reset-password'),
     path('admin/respondents/<int:user_id>/mark-checked/', AdminRespondentMarkCheckedView.as_view(), name='admin-respondent-mark-checked'),
     path('admin/respondents/<int:user_id>/mark-done/', AdminRespondentMarkDoneView.as_view(), name='admin-respondent-mark-done'),

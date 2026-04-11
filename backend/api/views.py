@@ -350,6 +350,51 @@ class AdminSubjectRecordsView(APIView):
 		})
 
 
+class AdminSubjectQuestionnaireDetailView(APIView):
+	permission_classes = [IsAuthenticated]
+
+	def delete(self, request, user_id, submission_id):
+		actor, _profile = get_or_create_user(request)
+		ensure_admin(actor)
+		User = get_user_model()
+		try:
+			subject = User.objects.get(id=user_id)
+		except User.DoesNotExist:
+			return Response({'detail': '受測者不存在'}, status=status.HTTP_404_NOT_FOUND)
+
+		try:
+			item = QuestionnaireSubmission.objects.get(id=submission_id, user=subject)
+		except QuestionnaireSubmission.DoesNotExist:
+			return Response({'detail': '紀錄不存在'}, status=status.HTTP_404_NOT_FOUND)
+
+		item.delete()
+		refresh_subject_status(subject)
+		return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class AdminSubjectRecordingSessionDetailView(APIView):
+	permission_classes = [IsAuthenticated]
+
+	def delete(self, request, user_id, session_id):
+		actor, _profile = get_or_create_user(request)
+		ensure_admin(actor)
+		User = get_user_model()
+		try:
+			subject = User.objects.get(id=user_id)
+		except User.DoesNotExist:
+			return Response({'detail': '受測者不存在'}, status=status.HTTP_404_NOT_FOUND)
+
+		try:
+			session = RecordingSession.objects.get(id=session_id, user=subject)
+		except RecordingSession.DoesNotExist:
+			return Response({'detail': '紀錄不存在'}, status=status.HTTP_404_NOT_FOUND)
+
+		RecordingClip.objects.filter(session_id=session.session_id, user=subject).delete()
+		session.delete()
+		refresh_subject_status(subject)
+		return Response(status=status.HTTP_204_NO_CONTENT)
+
+
 class AdminRespondentPasswordResetView(APIView):
 	permission_classes = [IsAuthenticated]
 	parser_classes = [JSONParser]
