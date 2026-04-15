@@ -5,7 +5,7 @@ import { API_BASE, authedFetch, fetchRespondents, getSessionUser } from '../util
 function RecordingPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const vowelPrompts = ['/a/', '/i/', '/u/', '/ɛ/', '/ə/']
+  const vowelPrompts = ['a(/a/)', 'i(/i/)', 'u(/u/)', 'e(/ɛ/)', 'o(/ə/)']
   const phraseGroups = [
     '請讀出鼻音 /m/, /n/ 各 2–3 秒 × 2',
     '連續念 6–10 次「pa-ta-ka」',
@@ -31,7 +31,6 @@ function RecordingPage() {
   const [sentenceIndex, setSentenceIndex] = useState(0) // for natural sentences
   const [clips, setClips] = useState([])
   const [stepReady, setStepReady] = useState(false)
-  const [promptDone, setPromptDone] = useState(new Set())
   const [sessionUser, setSessionUser] = useState(null)
   const [respondents, setRespondents] = useState([])
   const [targetUserId, setTargetUserId] = useState('')
@@ -47,7 +46,6 @@ function RecordingPage() {
 
   const deleteClip = useCallback(
     (idx) => {
-      let nextPromptSet = null
       let removedPrompt = null
       let removedPhase = null
 
@@ -55,15 +53,10 @@ function RecordingPage() {
         const next = [...prev]
         const [removed] = next.splice(idx, 1)
         if (removed?.url) URL.revokeObjectURL(removed.url)
-        nextPromptSet = new Set(next.map((c) => c.prompt))
         removedPrompt = removed?.prompt
         removedPhase = removed?.phase
         return next
       })
-
-      if (nextPromptSet) {
-        setPromptDone(nextPromptSet)
-      }
 
       if (removedPrompt) {
         if (removedPhase === 1) {
@@ -87,7 +80,6 @@ function RecordingPage() {
       setClips,
       setPhraseIndex,
       setPhase,
-      setPromptDone,
       setPromptIndex,
       setSentenceIndex,
       vowelPrompts,
@@ -96,7 +88,7 @@ function RecordingPage() {
 
   const uploadClip = async (blob, promptText, phaseValue) => {
     const formData = new FormData()
-    formData.append('audio_file', blob, `${promptText.replace(/\W+/g, '') || 'clip'}.webm`)
+    formData.append('audio_file', blob, `${promptText.replace(/\W+/g, '') || 'clip'}.mp4`)
     formData.append('prompt', promptText)
     formData.append('phase', phaseValue)
     formData.append('session_id', sessionIdRef.current)
@@ -228,6 +220,7 @@ function RecordingPage() {
   }
 
   const promptList = phase === 1 ? vowelPrompts : phase === 2 ? phraseGroups : naturalSentencePrompts
+  const promptDone = new Set(clips.filter((clip) => clip.phase === phase).map((clip) => clip.prompt))
   const currentPrompt =
     phase === 1 ? vowelPrompts[promptIndex] : phase === 2 ? phraseGroups[phraseIndex] : naturalSentencePrompts[sentenceIndex]
   const allDoneCurrentPhase = phase === 1 ? promptDone.size >= promptList.length : promptDone.has(currentPrompt)
@@ -247,18 +240,17 @@ function RecordingPage() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       recordStreamRef.current = stream
-      const mediaRecorder = new MediaRecorder(stream)
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/mp4' })
       recorderRef.current = mediaRecorder
       chunksRef.current = []
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) chunksRef.current.push(e.data)
       }
       mediaRecorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
+        const blob = new Blob(chunksRef.current, { type: 'audio/mp4' })
         const url = URL.createObjectURL(blob)
         const promptText = currentPrompt
         setClips((prev) => [...prev, { url, blob, prompt: promptText, createdAt: new Date().toISOString(), phase }])
-        setPromptDone((prev) => new Set([...prev, promptText]))
         clipCountRef.current += 1
         uploadClip(blob, promptText, phase)
         // auto-advance after recording when there is another vowel prompt
@@ -290,14 +282,12 @@ function RecordingPage() {
       if (!promptDone.has(currentPrompt)) return
       if (phraseIndex < phraseGroups.length - 1) {
         setPhraseIndex((prev) => prev + 1)
-        setPromptDone(new Set())
         setClips([])
       }
     } else {
       if (!promptDone.has(currentPrompt)) return
       if (sentenceIndex < naturalSentencePrompts.length - 1) {
         setSentenceIndex((prev) => prev + 1)
-        setPromptDone(new Set())
         setClips([])
       }
     }
@@ -361,12 +351,16 @@ function RecordingPage() {
               <div className="controls-row">
                 <button
                   type="button"
+                  className="hold-record-btn"
                   disabled={!noiseChecked || !stepReady || promptDone.has(currentPrompt)}
                   onMouseDown={handleStart}
                   onMouseUp={handleStop}
                   onMouseLeave={handleStop}
                   onTouchStart={(e) => { e.preventDefault(); handleStart() }}
+                  onTouchMove={(e) => { e.preventDefault() }}
                   onTouchEnd={(e) => { e.preventDefault(); handleStop() }}
+                  onContextMenu={(e) => e.preventDefault()}
+                  onSelectStart={(e) => e.preventDefault()}
                 >
                   按住錄製
                 </button>
@@ -392,7 +386,6 @@ function RecordingPage() {
                       setPromptIndex(0)
                       setPhraseIndex(0)
                       setSentenceIndex(0)
-                      setPromptDone(new Set())
                       setClips([])
                     }}
                   >
@@ -417,7 +410,6 @@ function RecordingPage() {
                     onClick={() => {
                       setPhase(3)
                       setSentenceIndex(0)
-                      setPromptDone(new Set())
                       setClips([])
                     }}
                   >

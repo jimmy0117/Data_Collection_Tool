@@ -37,6 +37,13 @@ a {
   font-size: 14px;
 }
 
+.radio-item input[type='radio'] {
+  width: auto;
+  padding: 0;
+  margin: 0;
+  flex: 0 0 auto;
+}
+
 .radio-item span {
   white-space: nowrap;
   word-break: keep-all;

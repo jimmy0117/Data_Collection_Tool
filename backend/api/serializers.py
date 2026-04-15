@@ -110,17 +110,23 @@ class RespondentListSerializer(serializers.ModelSerializer):
         return obj.first_name or obj.username
 
     def get_role(self, obj):
-        profile = getattr(obj, 'profile', None)
+        try:
+            profile = obj.profile
+        except UserProfile.DoesNotExist:
+            profile = None
         return getattr(profile, 'role', UserProfile.ROLE_RESPONDENT)
 
     def get_subject_status(self, obj):
-        profile = getattr(obj, 'profile', None)
+        try:
+            profile = obj.profile
+        except UserProfile.DoesNotExist:
+            profile = None
         return getattr(profile, 'subject_status', UserProfile.STATUS_TEST)
 
 
 class RespondentCreateSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=150)
-    password = serializers.CharField(max_length=128, min_length=6, write_only=True)
+    password = serializers.CharField(max_length=128, write_only=True)
     name = serializers.CharField(max_length=150, required=False, allow_blank=True)
 
     def validate_username(self, value):

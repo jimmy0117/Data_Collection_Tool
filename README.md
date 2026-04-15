@@ -9,6 +9,24 @@ pip install -r requirements.txt
 ## 啟動方式
 
 ### 前端
+安裝node js
+```bash
+# 下載並安裝 nvm：
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+
+# 不想重新啟動 shell 時，執行：
+\. "$HOME/.nvm/nvm.sh"
+
+# 下載並安裝 Node.js：
+nvm install 24
+
+# Verify the Node.js version:
+node -v # Should print "v24.14.1".
+
+# 核對 npm 版本：
+npm -v # 應會印出 "11.11.0"。
+```
+
 使用 Vite + React。clone 後執行以下指令：
 
 ```bash
@@ -56,6 +74,7 @@ cd backend
 python -m venv .venv
 .\.venv\Scripts\activate
 pip install -r requirements.txt
+python manage.py makemigrations api
 python manage.py migrate
 python manage.py runserver
 ```

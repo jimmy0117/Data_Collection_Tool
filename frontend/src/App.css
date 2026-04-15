@@ -519,7 +519,7 @@ label span {
   color: #4b5563;
 }
 
-input {
+input:not([type='radio']):not([type='checkbox']) {
   width: 100%;
   padding: 12px;
   border-radius: 12px;
@@ -538,7 +538,7 @@ textarea {
   font-size: 14px;
 }
 
-input:focus {
+input:not([type='radio']):not([type='checkbox']):focus {
   outline: 2px solid #bcd6ff;
   border-color: #8bb5ff;
 }
@@ -625,6 +625,13 @@ button:disabled {
   background: #e5e7eb;
   border-color: #cbd5e1;
   color: #94a3b8;
+}
+
+.hold-record-btn {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: none;
 }
 
 .auth-shell {

@@ -500,11 +500,16 @@ class LoginView(APIView):
 
 		token, _ = Token.objects.get_or_create(user=user)
 		profile, _ = UserProfile.objects.get_or_create(user=user)
+		role = profile.role or UserProfile.ROLE_RESPONDENT
+		if user.is_superuser and role != UserProfile.ROLE_ADMIN:
+			role = UserProfile.ROLE_ADMIN
+			profile.role = UserProfile.ROLE_ADMIN
+			profile.save(update_fields=['role'])
 		return Response({
 			'token': token.key,
 			'user': {
 				'name': user.first_name or user.username,
 				'username': user.username,
-				'role': profile.role or UserProfile.ROLE_RESPONDENT,
+				'role': role,
 			},
 		})

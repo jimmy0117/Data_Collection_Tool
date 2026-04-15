@@ -52,14 +52,23 @@ function AdminSubjectsPage() {
       })
       if (!res.ok) {
         const text = await res.text()
-        throw new Error(text || 'create failed')
+        try {
+          const parsed = text ? JSON.parse(text) : null
+          const detail = parsed?.detail
+          if (typeof detail === 'string' && detail.trim()) {
+            throw new Error(detail)
+          }
+          throw new Error(text || 'create failed')
+        } catch (parseErr) {
+          throw new Error(text || 'create failed')
+        }
       }
       setForm({ username: '', password: '', name: '' })
       setCreateStatus('受測者帳號已建立')
       await loadSubjects()
     } catch (err) {
       console.error(err)
-      setCreateStatus('建立受測者失敗，請確認帳號是否重複')
+      setCreateStatus(err?.message || '建立受測者失敗')
     } finally {
       setCreating(false)
     }

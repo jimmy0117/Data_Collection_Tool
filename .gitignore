@@ -11,5 +11,10 @@
  .mypy_cache/
  .venv/
  venv/
+/backend/venv/
+/backend/.venv/
+
+# mac
+.DS_Store
 
  
