@@ -101,10 +101,11 @@ class RespondentListSerializer(serializers.ModelSerializer):
     name = serializers.SerializerMethodField()
     role = serializers.SerializerMethodField()
     subject_status = serializers.SerializerMethodField()
+    note = serializers.SerializerMethodField()
 
     class Meta:
         model = get_user_model()
-        fields = ['id', 'username', 'name', 'role', 'subject_status', 'date_joined']
+        fields = ['id', 'username', 'name', 'email', 'note', 'role', 'subject_status', 'date_joined']
 
     def get_name(self, obj):
         return obj.first_name or obj.username
@@ -123,11 +124,20 @@ class RespondentListSerializer(serializers.ModelSerializer):
             profile = None
         return getattr(profile, 'subject_status', UserProfile.STATUS_TEST)
 
+    def get_note(self, obj):
+        try:
+            profile = obj.profile
+        except UserProfile.DoesNotExist:
+            profile = None
+        return getattr(profile, 'note', '')
+
 
 class RespondentCreateSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=150)
     password = serializers.CharField(max_length=128, write_only=True)
     name = serializers.CharField(max_length=150, required=False, allow_blank=True)
+    email = serializers.EmailField(required=False, allow_blank=True)
+    note = serializers.CharField(required=False, allow_blank=True)
 
     def validate_username(self, value):
         User = get_user_model()

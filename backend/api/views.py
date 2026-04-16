@@ -313,11 +313,13 @@ class RespondentManagementView(APIView):
 		user = User.objects.create_user(
 			username=validated['username'],
 			password=validated['password'],
+			email=validated.get('email', '').strip(),
 			first_name=validated.get('name', '').strip(),
 		)
 		profile, _ = UserProfile.objects.get_or_create(user=user)
 		profile.role = UserProfile.ROLE_RESPONDENT
-		profile.save(update_fields=['role'])
+		profile.note = validated.get('note', '').strip()
+		profile.save(update_fields=['role', 'note'])
 		output = RespondentListSerializer(user)
 		return Response(output.data, status=status.HTTP_201_CREATED)
 

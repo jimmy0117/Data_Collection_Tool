@@ -22,6 +22,7 @@ class UserProfile(models.Model):
 
 	user = models.OneToOneField(get_user_model(), on_delete=models.CASCADE, related_name='profile')
 	phone = models.CharField(max_length=50, blank=True)
+	note = models.TextField(blank=True)
 	role = models.CharField(max_length=20, choices=ROLE_CHOICES, default=ROLE_RESPONDENT)
 	subject_status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_TEST)
 	created_at = models.DateTimeField(auto_now_add=True)

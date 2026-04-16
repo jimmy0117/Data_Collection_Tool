@@ -12,7 +12,7 @@ function AdminSubjectsPage() {
   const [checkingId, setCheckingId] = useState(null)
   const [restoringId, setRestoringId] = useState(null)
   const [creating, setCreating] = useState(false)
-  const [form, setForm] = useState({ username: '', password: '', name: '' })
+  const [form, setForm] = useState({ username: '', password: '', name: '', email: '', note: '' })
 
   const loadSubjects = async () => {
     setLoading(true)
@@ -48,6 +48,8 @@ function AdminSubjectsPage() {
           username: form.username.trim(),
           password: form.password,
           name: form.name.trim(),
+          email: form.email.trim(),
+          note: form.note.trim(),
         }),
       })
       if (!res.ok) {
@@ -63,7 +65,7 @@ function AdminSubjectsPage() {
           throw new Error(text || 'create failed')
         }
       }
-      setForm({ username: '', password: '', name: '' })
+      setForm({ username: '', password: '', name: '', email: '', note: '' })
       setCreateStatus('受測者帳號已建立')
       await loadSubjects()
     } catch (err) {
@@ -172,6 +174,8 @@ function AdminSubjectsPage() {
                     </span>
                     <div className="clip-title">{subject.name || subject.username}</div>
                     <div className="clip-sub">username：{subject.username}</div>
+                    <div className="clip-sub">email：{subject.email || '未填寫'}</div>
+                    {subject.note && <div className="clip-sub">備註：{subject.note}</div>}
                     <div className="clip-sub">建立時間：{subject.date_joined ? new Date(subject.date_joined).toLocaleString() : '未知'}</div>
                   </div>
                   <div className="consent-actions" style={{ flexWrap: 'wrap', justifyContent: 'flex-end' }}>
@@ -223,6 +227,8 @@ function AdminSubjectsPage() {
                   <span className="status-pill ok" style={{ marginBottom: '6px' }}>CHECKED</span>
                   <div className="clip-title">{subject.name || subject.username}</div>
                   <div className="clip-sub">username：{subject.username}</div>
+                  <div className="clip-sub">email：{subject.email || '未填寫'}</div>
+                  {subject.note && <div className="clip-sub">備註：{subject.note}</div>}
                 </div>
                 <div className="consent-actions" style={{ flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                   <button
@@ -254,6 +260,14 @@ function AdminSubjectsPage() {
           <label>
             <span>顯示姓名（選填）</span>
             <input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} />
+          </label>
+          <label>
+            <span>Email（選填）</span>
+            <input type="email" value={form.email} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))} />
+          </label>
+          <label style={{ gridColumn: '1 / -1' }}>
+            <span>備註（選填）</span>
+            <textarea rows={3} value={form.note} onChange={(e) => setForm((p) => ({ ...p, note: e.target.value }))} />
           </label>
           <div className="form-actions">
             <button type="button" onClick={handleCreate} disabled={creating}>

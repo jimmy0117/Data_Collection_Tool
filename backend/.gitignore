@@ -5,5 +5,5 @@ __pycache__/
 .webm
 db.sqlite3
 /media/
-/api/migrations/
+/api/migrations/__pycache__/
 backend/db.sqlite3
