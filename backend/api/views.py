@@ -336,6 +336,7 @@ class AdminSubjectRecordsView(APIView):
 
 		questionnaires = QuestionnaireSubmission.objects.filter(user=subject).order_by('-submitted_at')[:100]
 		recording_sessions = RecordingSession.objects.filter(user=subject).order_by('-created_at')[:100]
+		recording_clips = RecordingClip.objects.filter(user=subject).order_by('-created_at')[:500]
 		signatures = ConsentSignature.objects.filter(user=subject).order_by('-created_at')[:50]
 
 		return Response({
@@ -346,6 +347,7 @@ class AdminSubjectRecordsView(APIView):
 			},
 			'questionnaires': QuestionnaireSubmissionSerializer(questionnaires, many=True).data,
 			'recording_sessions': RecordingSessionSerializer(recording_sessions, many=True).data,
+			'recording_clips': RecordingClipSerializer(recording_clips, many=True, context={'request': request}).data,
 			'signatures': ConsentSignatureSerializer(signatures, many=True, context={'request': request}).data,
 		})
 

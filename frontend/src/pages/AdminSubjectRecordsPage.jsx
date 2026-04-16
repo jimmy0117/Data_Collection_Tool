@@ -75,10 +75,16 @@ function AdminSubjectRecordsPage() {
 
       setData((prev) => {
         if (!prev) return prev
+        const session = Array.isArray(prev.recording_sessions)
+          ? prev.recording_sessions.find((item) => String(item.id) === String(sessionId))
+          : null
         return {
           ...prev,
           recording_sessions: Array.isArray(prev.recording_sessions)
             ? prev.recording_sessions.filter((item) => String(item.id) !== String(sessionId))
+            : [],
+          recording_clips: Array.isArray(prev.recording_clips)
+            ? prev.recording_clips.filter((clip) => String(clip.session_id) !== String(session?.session_id || ''))
             : [],
         }
       })
@@ -89,6 +95,26 @@ function AdminSubjectRecordsPage() {
     } finally {
       setDeletingId('')
     }
+  }
+
+  const formatAnswerValue = (resp) => {
+    if (!resp || typeof resp !== 'object') return ''
+    if (typeof resp.score === 'number') return String(resp.score)
+    if (resp.answer !== undefined && resp.answer !== null && resp.answer !== '') {
+      if (typeof resp.answer === 'string') return resp.answer
+      return JSON.stringify(resp.answer)
+    }
+    if (resp.value !== undefined && resp.value !== null && resp.value !== '') {
+      if (typeof resp.value === 'string') return resp.value
+      return JSON.stringify(resp.value)
+    }
+    if (resp.text !== undefined && resp.text !== null && resp.text !== '') return String(resp.text)
+    return ''
+  }
+
+  const getSessionClips = (sessionCode) => {
+    if (!Array.isArray(data?.recording_clips) || !sessionCode) return []
+    return data.recording_clips.filter((clip) => String(clip.session_id) === String(sessionCode))
   }
 
   return (
@@ -115,12 +141,16 @@ function AdminSubjectRecordsPage() {
                         <div className="clip-sub">操作者：{item.created_by_username || '受測者本人'}</div>
                       </div>
                       <div className="clip-actions" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '6px' }}>
-                        {responses.slice(0, 5).map((resp, idx) => (
-                          <div key={`${item.id}-${idx}`} className="clip-sub">
-                            {resp.question ? `${resp.question}：` : ''}{typeof resp.score === 'number' ? resp.score : resp.answer ?? ''}
-                          </div>
-                        ))}
-                        {responses.length > 5 && <div className="clip-sub">… 其餘 {responses.length - 5} 題</div>}
+                        {responses.length > 0 ? (
+                          responses.map((resp, idx) => (
+                            <div key={`${item.id}-${idx}`} className="clip-sub">
+                              {resp.question ? `${resp.question}：` : `第 ${idx + 1} 題：`}
+                              {formatAnswerValue(resp) || '（無內容）'}
+                            </div>
+                          ))
+                        ) : (
+                          <div className="clip-sub">無可顯示的作答內容</div>
+                        )}
                         <button
                           type="button"
                           className="ghost-btn"
@@ -143,27 +173,46 @@ function AdminSubjectRecordsPage() {
             <h3>錄音紀錄</h3>
             {Array.isArray(data.recording_sessions) && data.recording_sessions.length > 0 ? (
               <div className="clip-list">
-                {data.recording_sessions.map((item) => (
-                  <div key={item.id} className="clip-row">
-                    <div>
-                      <div className="clip-title">錄音流程</div>
-                      <div className="clip-sub">Session ID：{item.session_id || '未知'}</div>
-                      <div className="clip-sub">片段數：{item.clip_count ?? 0}</div>
-                      <div className="clip-sub">建立時間：{item.created_at ? new Date(item.created_at).toLocaleString() : '未知'}</div>
-                      <div className="clip-sub">操作者：{item.created_by_username || '受測者本人'}</div>
+                {data.recording_sessions.map((item) => {
+                  const clips = getSessionClips(item.session_id)
+                  return (
+                    <div key={item.id} className="clip-row" style={{ alignItems: 'flex-start' }}>
+                      <div>
+                        <div className="clip-title">錄音流程</div>
+                        <div className="clip-sub">Session ID：{item.session_id || '未知'}</div>
+                        <div className="clip-sub">片段數：{item.clip_count ?? 0}</div>
+                        <div className="clip-sub">建立時間：{item.created_at ? new Date(item.created_at).toLocaleString() : '未知'}</div>
+                        <div className="clip-sub">操作者：{item.created_by_username || '受測者本人'}</div>
+                        <div className="clip-sub" style={{ marginTop: '6px' }}>錄音內容：</div>
+                        {clips.length > 0 ? (
+                          <div className="clip-list" style={{ marginTop: '6px' }}>
+                            {clips.map((clip) => (
+                              <div key={clip.id} className="clip-row" style={{ width: '100%', alignItems: 'center' }}>
+                                <div>
+                                  <div className="clip-sub">提示：{clip.prompt || '未知'}</div>
+                                  <div className="clip-sub">Phase：{clip.phase ?? '未知'}</div>
+                                </div>
+                                <audio controls src={clip.audio_file} />
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="clip-sub">此錄音流程沒有片段可播放</div>
+                        )}
+                      </div>
+                      <div className="clip-actions">
+                        <button
+                          type="button"
+                          className="ghost-btn"
+                          onClick={() => handleDeleteRecordingSession(item.id)}
+                          disabled={deletingId === `r-${item.id}`}
+                        >
+                          {deletingId === `r-${item.id}` ? '刪除中…' : '刪除'}
+                        </button>
+                      </div>
                     </div>
-                    <div className="clip-actions">
-                      <button
-                        type="button"
-                        className="ghost-btn"
-                        onClick={() => handleDeleteRecordingSession(item.id)}
-                        disabled={deletingId === `r-${item.id}`}
-                      >
-                        {deletingId === `r-${item.id}` ? '刪除中…' : '刪除'}
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             ) : (
               <div className="placeholder-desc">目前沒有錄音紀錄</div>

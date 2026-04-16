@@ -7,7 +7,8 @@ function RecordingPage() {
   const [searchParams] = useSearchParams()
   const vowelPrompts = ['a(/a/)', 'i(/i/)', 'u(/u/)', 'e(/ɛ/)', 'o(/ə/)']
   const phraseGroups = [
-    '請讀出鼻音 /m/, /n/ 各 2–3 秒 × 2',
+    '請讀出鼻音 /m/(閉嘴)， 2–3 秒 × 2',
+    '請讀出鼻音 /n/(張嘴)， 2–3 秒 × 2',
     '連續念 6–10 次「pa-ta-ka」',
     '請依序念：媽媽、奶奶、哥哥、爸爸，各 2 次，保持清晰與正常語速。',
     '請自然語速數數 1–40，保持穩定。',
@@ -41,6 +42,8 @@ function RecordingPage() {
   const recorderRef = useRef(null)
   const recordStreamRef = useRef(null)
   const chunksRef = useRef([])
+  const holdToRecordPressedRef = useRef(false)
+  const stopRequestedRef = useRef(false)
   const sessionIdRef = useRef(typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}`)
   const clipCountRef = useRef(0)
 
@@ -223,10 +226,25 @@ function RecordingPage() {
   const promptDone = new Set(clips.filter((clip) => clip.phase === phase).map((clip) => clip.prompt))
   const currentPrompt =
     phase === 1 ? vowelPrompts[promptIndex] : phase === 2 ? phraseGroups[phraseIndex] : naturalSentencePrompts[sentenceIndex]
-  const allDoneCurrentPhase = phase === 1 ? promptDone.size >= promptList.length : promptDone.has(currentPrompt)
-  const allDonePhase2 = phase === 2 && phraseIndex === phraseGroups.length - 1 && promptDone.has(currentPrompt)
-  const allDoneAll = phase === 3 && sentenceIndex === naturalSentencePrompts.length - 1 && promptDone.has(currentPrompt)
-  const canAdvancePrompt = promptDone.has(currentPrompt)
+  const phase2SingleTakePrompts = new Set([
+    '連續念 6–10 次「pa-ta-ka」',
+    '請自然語速數數 1–40，保持穩定。',
+  ])
+  const currentPromptRecordCount = clips.filter((clip) => clip.phase === phase && clip.prompt === currentPrompt).length
+  const requiredPromptRecordCount =
+    phase === 1
+      ? 2
+      : phase === 2
+        ? (phase2SingleTakePrompts.has(currentPrompt) ? 1 : 2)
+        : 1
+  const currentPromptCompleted = currentPromptRecordCount >= requiredPromptRecordCount
+  const allDoneCurrentPhase =
+    phase === 1
+      ? vowelPrompts.every((prompt) => clips.filter((clip) => clip.phase === 1 && clip.prompt === prompt).length >= 2)
+      : currentPromptCompleted
+  const allDonePhase2 = phase === 2 && phraseIndex === phraseGroups.length - 1 && currentPromptCompleted
+  const allDoneAll = phase === 3 && sentenceIndex === naturalSentencePrompts.length - 1 && currentPromptCompleted
+  const canAdvancePrompt = currentPromptCompleted
   const isLastPromptInPhase =
     (phase === 2 && phraseIndex === phraseGroups.length - 1) ||
     (phase === 3 && sentenceIndex === naturalSentencePrompts.length - 1)
@@ -236,18 +254,27 @@ function RecordingPage() {
       setDelegateStatus('請先選擇受測者')
       return
     }
-    if (!noiseChecked || isRecording || !stepReady || promptDone.has(currentPrompt)) return
+    if (!noiseChecked || isRecording || !stepReady || currentPromptCompleted) return
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       recordStreamRef.current = stream
       const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/mp4' })
       recorderRef.current = mediaRecorder
       chunksRef.current = []
+      stopRequestedRef.current = false
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) chunksRef.current.push(e.data)
       }
       mediaRecorder.onstop = () => {
         const blob = new Blob(chunksRef.current, { type: 'audio/mp4' })
+        chunksRef.current = []
+        recorderRef.current = null
+        stopRequestedRef.current = false
+
+        if (blob.size === 0) {
+          return
+        }
+
         const url = URL.createObjectURL(blob)
         const promptText = currentPrompt
         setClips((prev) => [...prev, { url, blob, prompt: promptText, createdAt: new Date().toISOString(), phase }])
@@ -255,11 +282,25 @@ function RecordingPage() {
         uploadClip(blob, promptText, phase)
         // auto-advance after recording when there is another vowel prompt
         if (phase === 1) {
-          setPromptIndex((prev) => (prev + 1 < vowelPrompts.length ? prev + 1 : prev))
+          setPromptIndex((prev) => {
+            const currentCount = clips.filter((clip) => clip.phase === 1 && clip.prompt === promptText).length + 1
+            if (currentCount >= 2 && prev + 1 < vowelPrompts.length) {
+              return prev + 1
+            }
+            return prev
+          })
         }
       }
       mediaRecorder.start()
       setIsRecording(true)
+
+      // If the user already released before recorder initialization finished, stop immediately.
+      if (!holdToRecordPressedRef.current) {
+        mediaRecorder.stop()
+        recordStreamRef.current?.getTracks().forEach((t) => t.stop())
+        recordStreamRef.current = null
+        setIsRecording(false)
+      }
     } catch (err) {
       console.error(err)
       setNoiseStatus('錄音啟動失敗，請檢查麥克風權限')
@@ -267,25 +308,38 @@ function RecordingPage() {
   }
 
   const handleStop = () => {
-    if (recorderRef.current && isRecording) {
-      recorderRef.current.stop()
+    const recorder = recorderRef.current
+    if (recorder && recorder.state === 'recording' && !stopRequestedRef.current) {
+      stopRequestedRef.current = true
+      recorder.stop()
     }
     recordStreamRef.current?.getTracks().forEach((t) => t.stop())
     recordStreamRef.current = null
     setIsRecording(false)
   }
 
+  const handleHoldStart = () => {
+    holdToRecordPressedRef.current = true
+    handleStart()
+  }
+
+  const handleHoldEnd = () => {
+    holdToRecordPressedRef.current = false
+    handleStop()
+  }
+
   const handleNextPrompt = () => {
     if (phase === 1) {
+      if (!currentPromptCompleted) return
       setPromptIndex((prev) => (prev + 1) % vowelPrompts.length)
     } else if (phase === 2) {
-      if (!promptDone.has(currentPrompt)) return
+      if (!currentPromptCompleted) return
       if (phraseIndex < phraseGroups.length - 1) {
         setPhraseIndex((prev) => prev + 1)
         setClips([])
       }
     } else {
-      if (!promptDone.has(currentPrompt)) return
+      if (!currentPromptCompleted) return
       if (sentenceIndex < naturalSentencePrompts.length - 1) {
         setSentenceIndex((prev) => prev + 1)
         setClips([])
@@ -347,18 +401,23 @@ function RecordingPage() {
                   提示 {phase === 1 ? `#${promptIndex + 1} (元音)` : phase === 2 ? `#${phraseIndex + 1} (其他題目)` : `#${sentenceIndex + 1} (自然語句)`}
                 </div>
                 <p className="prompt-text">{currentPrompt}</p>
+                <div className="placeholder-desc">
+                  {phase === 2
+                    ? `此題需錄滿 ${requiredPromptRecordCount} 次，目前已錄 ${currentPromptRecordCount} 次`
+                    : `此題目前已錄 ${currentPromptRecordCount} 次`}
+                </div>
               </div>
               <div className="controls-row">
                 <button
                   type="button"
                   className="hold-record-btn"
-                  disabled={!noiseChecked || !stepReady || promptDone.has(currentPrompt)}
-                  onMouseDown={handleStart}
-                  onMouseUp={handleStop}
-                  onMouseLeave={handleStop}
-                  onTouchStart={(e) => { e.preventDefault(); handleStart() }}
+                  disabled={!noiseChecked || !stepReady || currentPromptCompleted}
+                  onMouseDown={handleHoldStart}
+                  onMouseUp={handleHoldEnd}
+                  onMouseLeave={handleHoldEnd}
+                  onTouchStart={(e) => { e.preventDefault(); handleHoldStart() }}
                   onTouchMove={(e) => { e.preventDefault() }}
-                  onTouchEnd={(e) => { e.preventDefault(); handleStop() }}
+                  onTouchEnd={(e) => { e.preventDefault(); handleHoldEnd() }}
                   onContextMenu={(e) => e.preventDefault()}
                   onSelectStart={(e) => e.preventDefault()}
                 >
@@ -368,14 +427,18 @@ function RecordingPage() {
                   type="button"
                   className="ghost-btn"
                   onClick={handleNextPrompt}
-                  disabled={isRecording || (phase !== 1 && (!canAdvancePrompt || isLastPromptInPhase))}
+                  disabled={isRecording || !canAdvancePrompt || (phase !== 1 && isLastPromptInPhase)}
                 >
                   {phase === 1 ? '下一個提示' : '下一個題目'}
                 </button>
                 <span className={`status-pill ${isRecording ? 'recording' : 'pending'}`}>
                   {isRecording ? '錄音中…' : '待錄音'}
                 </span>
-                {!canAdvancePrompt && <span className="status-pill">請先錄製此提示</span>}
+                {!canAdvancePrompt && (
+                  <span className="status-pill">
+                    {phase === 2 ? `請先錄滿 ${requiredPromptRecordCount} 次` : '請先錄製此提示'}
+                  </span>
+                )}
                 {phase === 1 && allDoneCurrentPhase && (
                   <button
                     type="button"
