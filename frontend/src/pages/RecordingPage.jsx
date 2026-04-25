@@ -15,11 +15,8 @@ function RecordingPage() {
   ]
   const naturalSentencePrompts = [
     '爸爸帶弟弟去公園跑步',
-    '哥哥幫媽媽搬東西',
     '媽媽明天要買牛奶',
-    '妹妹拿麵包給奶奶',
     '今天下午我和朋友一起去市場買水果',
-    '放學後我和同學一起去打球',
   ]
 
   const [noiseChecked, setNoiseChecked] = useState(false)
