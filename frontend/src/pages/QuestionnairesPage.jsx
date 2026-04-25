@@ -116,6 +116,30 @@ const RFS_ITEMS = [
   },
 ]
 
+const normalizeGenderValue = (value) => {
+  const raw = String(value || '').trim().toLowerCase()
+  if (!raw) return ''
+  if (['m', 'male', 'man', '男', '男性'].includes(raw)) return 'male'
+  if (['f', 'female', 'woman', '女', '女性'].includes(raw)) return 'female'
+  if (['other', 'others', '其他', '非二元', 'non-binary', 'nonbinary'].includes(raw)) return 'other'
+  if (['prefer_not_to_say', 'unknown', '不透露', '未知'].includes(raw)) return 'prefer_not_to_say'
+  return ''
+}
+
+const extractDemographicsFromQuestionnaires = (questionnaires) => {
+  const list = Array.isArray(questionnaires) ? questionnaires : []
+  for (const item of list) {
+    const answers = item?.answers
+    if (!answers || typeof answers !== 'object') continue
+    const age = answers.age === undefined || answers.age === null ? '' : String(answers.age)
+    const gender = normalizeGenderValue(answers.gender)
+    if (age || gender) {
+      return { age, gender }
+    }
+  }
+  return { age: '', gender: '' }
+}
+
 function QuestionnairesPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -127,6 +151,7 @@ function QuestionnairesPage() {
     const obj = {}
     VHI_ITEMS.forEach((_, idx) => { obj[idx] = '0' })
     obj.age = ''
+    obj.gender = ''
     return obj
   }, [])
   const initialStopBangAnswers = useMemo(() => {
@@ -186,6 +211,67 @@ function QuestionnairesPage() {
     }
   }, [searchParams])
 
+  useEffect(() => {
+    if (!sessionUser || sessionUser.role === 'admin') return
+    let cancelled = false
+
+    const loadDefaultsForSelf = async () => {
+      try {
+        const res = await authedFetch(`${API_BASE}/questionnaires/`)
+        if (!res.ok) throw new Error('fetch failed')
+        const data = await res.json()
+        if (cancelled) return
+        const defaults = extractDemographicsFromQuestionnaires(data)
+        setVhiAnswers((prev) => ({
+          ...prev,
+          age: defaults.age,
+          gender: defaults.gender,
+        }))
+      } catch (err) {
+        console.error('載入既有年齡/性別失敗', err)
+      }
+    }
+
+    loadDefaultsForSelf()
+
+    return () => {
+      cancelled = true
+    }
+  }, [sessionUser])
+
+  useEffect(() => {
+    if (sessionUser?.role !== 'admin') return
+    if (!targetUserId) {
+      setVhiAnswers((prev) => ({ ...prev, age: '', gender: '' }))
+      return
+    }
+
+    let cancelled = false
+
+    const loadDefaultsForTarget = async () => {
+      try {
+        const res = await authedFetch(`${API_BASE}/admin/respondents/${targetUserId}/records/`)
+        if (!res.ok) throw new Error('fetch failed')
+        const payload = await res.json()
+        if (cancelled) return
+        const defaults = extractDemographicsFromQuestionnaires(payload?.questionnaires)
+        setVhiAnswers((prev) => ({
+          ...prev,
+          age: defaults.age,
+          gender: defaults.gender,
+        }))
+      } catch (err) {
+        console.error('載入受測者既有年齡/性別失敗', err)
+      }
+    }
+
+    loadDefaultsForTarget()
+
+    return () => {
+      cancelled = true
+    }
+  }, [sessionUser, targetUserId])
+
   const submitQuestionnaire = async (payload) => {
     const nextPayload = { ...payload }
     if (sessionUser?.role === 'admin' && targetUserId) {
@@ -222,6 +308,7 @@ function QuestionnairesPage() {
         questionnaire_id: 'VHI-10',
         answers: {
           age: vhiAnswers.age || '',
+          gender: vhiAnswers.gender || '',
           responses: VHI_ITEMS.map((q, idx) => ({ question: q, score: Number(vhiAnswers[idx] || 0) })),
         },
       }
@@ -253,7 +340,7 @@ function QuestionnairesPage() {
       const payload = {
         questionnaire_id: '病史調查', 
         answers: {
-          note: 'gender 已由系統資料帶入，不另行提問',
+          note: 'gender 於 VHI-10 表單欄位填寫',
           total_score: totalScore,
           responses,
         },
@@ -389,6 +476,17 @@ function QuestionnairesPage() {
               onChange={(e) => setVhiAnswers((p) => ({ ...p, age: e.target.value }))}
               placeholder="請輸入年齡"
             />
+          </label>
+          <label>
+            <span>性別</span>
+            <select
+              value={vhiAnswers.gender}
+              onChange={(e) => setVhiAnswers((p) => ({ ...p, gender: e.target.value }))}
+            >
+              <option value="">請選擇性別</option>
+              <option value="male">男</option>
+              <option value="female">女</option>
+            </select>
           </label>
           {VHI_ITEMS.map((q, idx) => (
             <label key={q} style={{ borderBottom: '1px solid #e5e7eb', paddingBottom: '10px' }}>

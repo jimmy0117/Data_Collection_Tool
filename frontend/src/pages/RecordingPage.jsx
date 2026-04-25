@@ -88,7 +88,7 @@ function RecordingPage() {
 
   const uploadClip = async (blob, promptText, phaseValue) => {
     const formData = new FormData()
-    formData.append('audio_file', blob, `${promptText.replace(/\W+/g, '') || 'clip'}.mp4`)
+    formData.append('audio_file', blob, `${promptText.replace(/\W+/g, '') || 'clip'}.webm`)
     formData.append('prompt', promptText)
     formData.append('phase', phaseValue)
     formData.append('session_id', sessionIdRef.current)
@@ -255,7 +255,7 @@ function RecordingPage() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       recordStreamRef.current = stream
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/mp4' })
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' })
       recorderRef.current = mediaRecorder
       chunksRef.current = []
       stopRequestedRef.current = false
@@ -263,7 +263,7 @@ function RecordingPage() {
         if (e.data.size > 0) chunksRef.current.push(e.data)
       }
       mediaRecorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: 'audio/mp4' })
+        const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
         chunksRef.current = []
         recorderRef.current = null
         stopRequestedRef.current = false
